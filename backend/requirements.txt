@@ -1,0 +1,35 @@
+# MSTool-AI-QMS — Regulatory Compliance Automation Platform
+# FastAPI Backend
+
+# Core
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.0
+pydantic-settings==2.5.2
+
+# HTTP Client (for GitHub API, NVD API, MSTool-AI API)
+httpx==0.28.1
+
+# MCP Servers
+fastmcp==2.3.0
+
+# AI (Claude API for agents)
+anthropic==0.44.0
+
+# Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+PyJWT>=2.10.1
+
+# Utilities
+python-dotenv>=1.1.0
+python-json-logger==2.0.7
+aiofiles==24.1.0
+
+# PDF Generation
+reportlab==4.2.5
+
+# Testing
+pytest==8.3.3
+pytest-asyncio==0.24.0
+pytest-cov
