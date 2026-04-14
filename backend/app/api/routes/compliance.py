@@ -27,6 +27,16 @@ async def get_compliance_score(user: CurrentUser = Depends(get_current_user)):
         raise HTTPException(status_code=503, detail=str(e))
 
 
+@router.get("/score-detailed")
+async def get_detailed_compliance_score(user: CurrentUser = Depends(get_current_user)):
+    """Compute compliance score with full evidence per check — for dashboard."""
+    try:
+        service = _get_service()
+        return service.compute_detailed_score()
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+
 @router.get("/auth-coverage")
 async def get_auth_coverage(user: CurrentUser = Depends(get_current_user)):
     """Detailed authentication coverage per route file."""
