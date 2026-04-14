@@ -278,7 +278,7 @@ class ComplianceService:
                 verified_count = content.count("VERIFIED")
                 partial_count = content.count("PARTIAL")
                 total = verified_count + partial_count
-                risk_pct = (verified_count / total) * 100 if total > 0 else 0
+                risk_pct = round((verified_count / total) * 100, 1) if total > 0 else 0
                 risk_evidence.append({
                     "file": latest["name"],
                     "github_url": f"{github_base}/{latest['path']}",
