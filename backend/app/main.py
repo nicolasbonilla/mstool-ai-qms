@@ -16,12 +16,38 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
+from contextlib import asynccontextmanager
+import threading
+
+
+def _warm_cache():
+    """Pre-load GitHub data into cache on startup (background thread)."""
+    try:
+        from app.services.compliance_service import ComplianceService
+        svc = ComplianceService()
+        svc.compute_full_score()
+        logger.info("Cache warmed: compliance scores pre-loaded")
+    except Exception as e:
+        logger.warning(f"Cache warm failed (non-fatal): {e}")
+
+
+@asynccontextmanager
+async def lifespan(app):
+    # Startup: warm cache in background thread so it doesn't block startup
+    threading.Thread(target=_warm_cache, daemon=True).start()
+    yield
+
+
+import logging
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="MSTool-AI-QMS",
     version=settings.APP_VERSION,
     description="AI-powered regulatory compliance automation for IEC 62304 Class C medical device software",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
+    lifespan=lifespan,
 )
 
 # CORS

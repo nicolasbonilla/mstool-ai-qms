@@ -7,7 +7,8 @@ This allows the QMS backend to run in Cloud Run without local repo access.
 
 import logging
 import base64
-from typing import Optional, List, Dict, Any
+import time
+from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime, timezone
 
 import httpx
@@ -17,14 +18,18 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+# Module-level cache: {cache_key: (data, expire_timestamp)}
+_cache: Dict[str, Tuple[Any, float]] = {}
+CACHE_TTL = 300  # 5 minutes
+
 
 class GitHubService:
-    """Read MSTool-AI repo via GitHub REST API."""
+    """Read MSTool-AI repo via GitHub REST API with in-memory cache."""
 
     BASE_URL = "https://api.github.com"
 
     def __init__(self):
-        self.repo = settings.GITHUB_REPO  # "nicolasbonilla/medical-imaging-viewer"
+        self.repo = settings.GITHUB_REPO
         self.token = settings.GITHUB_TOKEN
         self.headers = {
             "Accept": "application/vnd.github+json",
@@ -37,13 +42,27 @@ class GitHubService:
         return f"{self.BASE_URL}/repos/{self.repo}/{path}"
 
     def _get(self, path: str, params: dict = None) -> Any:
-        """Make authenticated GET request to GitHub API."""
+        """Make authenticated GET request with cache."""
+        cache_key = f"{path}:{params}"
+        now = time.time()
+
+        # Check cache
+        if cache_key in _cache:
+            data, expires = _cache[cache_key]
+            if now < expires:
+                return data
+
+        # Fetch from GitHub
         with httpx.Client(timeout=30) as client:
             resp = client.get(self._url(path), headers=self.headers, params=params)
             if resp.status_code == 404:
+                _cache[cache_key] = (None, now + CACHE_TTL)
                 return None
             resp.raise_for_status()
-            return resp.json()
+            result = resp.json()
+
+        _cache[cache_key] = (result, now + CACHE_TTL)
+        return result
 
     # ─── File operations ───
 
