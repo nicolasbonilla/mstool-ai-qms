@@ -3,6 +3,7 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, GitBranch, ShieldCheck,
   Package, RefreshCw, Bell, LogOut, User, BookOpen,
+  ChevronRight,
 } from 'lucide-react';
 import { useAuthStore } from './store/useAuthStore';
 import LoginPage from './pages/LoginPage';
@@ -43,94 +44,109 @@ export default function App() {
     return unsubscribe;
   }, [init]);
 
-  // Loading
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-navy flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-teal border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-400 text-sm">Loading MSTool-AI-QMS...</p>
+          <div className="w-12 h-12 border-2 border-teal border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400 text-sm font-medium">Loading MSTool-AI-QMS...</p>
         </div>
       </div>
     );
   }
 
-  // Not authenticated
   if (!user) {
     return <LoginPage />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-surface-secondary flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-navy text-white flex flex-col fixed h-full">
-        <div className="p-6 border-b border-navy-light">
-          <h1 className="text-lg font-bold text-teal-light">MSTool-AI-QMS</h1>
-          <p className="text-xs text-gray-400 mt-1">Regulatory Compliance</p>
+      <aside className="w-[260px] bg-navy fixed h-full flex flex-col z-40">
+        {/* Brand */}
+        <div className="p-5 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-teal to-accent rounded-xl flex items-center justify-center shadow-glow-sm">
+              <ShieldCheck size={18} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-[15px] font-bold text-white tracking-tight">MSTool-AI-QMS</h1>
+              <p className="text-[10px] text-gray-500 font-medium">Regulatory Compliance</p>
+            </div>
+          </div>
         </div>
-        <nav className="flex-1 py-4">
+
+        {/* Navigation */}
+        <nav className="flex-1 py-2 space-y-0.5">
           {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
             const active = location.pathname === path;
             return (
               <Link
                 key={path}
                 to={path}
-                className={`flex items-center gap-3 px-6 py-3 text-sm transition-colors ${
-                  active
-                    ? 'bg-teal/20 text-teal-light border-r-2 border-teal'
-                    : 'text-gray-400 hover:text-white hover:bg-navy-light'
-                }`}
+                className={`sidebar-item ${active ? 'sidebar-item-active' : 'sidebar-item-inactive'}`}
               >
-                <Icon size={18} />
-                {label}
+                <Icon size={17} strokeWidth={active ? 2.2 : 1.8} />
+                <span className="flex-1">{label}</span>
+                {active && <ChevronRight size={14} className="text-teal/60" />}
               </Link>
             );
           })}
         </nav>
 
-        {/* User info + logout */}
-        <div className="p-4 border-t border-navy-light">
+        {/* IEC Badge */}
+        <div className="mx-4 mb-3 p-3 rounded-xl bg-gradient-to-r from-teal/[0.08] to-accent/[0.05] border border-white/[0.04]">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-teal/20 flex items-center justify-center">
+              <Bell size={12} className="text-teal" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-gray-300">IEC 62304 Class C</p>
+              <p className="text-[9px] text-gray-500">Highest Safety Classification</p>
+            </div>
+          </div>
+        </div>
+
+        {/* User */}
+        <div className="p-4 border-t border-white/[0.06]">
           <div className="flex items-center gap-3 mb-3">
             {profile?.picture ? (
-              <img src={profile.picture} alt="" className="w-8 h-8 rounded-full" />
+              <img src={profile.picture} alt="" className="w-9 h-9 rounded-xl object-cover ring-2 ring-white/10" />
             ) : (
-              <div className="w-8 h-8 bg-teal/20 rounded-full flex items-center justify-center">
-                <User size={14} className="text-teal-light" />
+              <div className="w-9 h-9 bg-gradient-to-br from-teal/20 to-accent/20 rounded-xl flex items-center justify-center ring-1 ring-white/10">
+                <User size={15} className="text-teal-light" />
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-white truncate">{profile?.name || user.email}</p>
-              <p className="text-xs text-gray-500">{ROLE_LABELS[profile?.role || 'viewer']}</p>
+              <p className="text-[13px] font-semibold text-white truncate">{profile?.name || user.email}</p>
+              <p className="text-[10px] text-gray-500 font-medium">{ROLE_LABELS[profile?.role || 'viewer']}</p>
             </div>
           </div>
           <button
             onClick={logout}
-            className="flex items-center gap-2 text-xs text-gray-500 hover:text-red-400 transition-colors w-full"
+            className="flex items-center gap-2 text-[11px] text-gray-500 hover:text-red-400 transition-all duration-200 w-full py-1.5 px-2 rounded-lg hover:bg-red-500/[0.06]"
           >
-            <LogOut size={14} />
+            <LogOut size={13} />
             Sign Out
           </button>
-          <div className="flex items-center gap-2 text-xs text-gray-600 mt-3">
-            <Bell size={14} />
-            <span>IEC 62304 Class C</span>
-          </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 p-8">
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/forms" element={<FormsPage />} />
-          <Route path="/traceability" element={<TraceabilityPage />} />
-          <Route path="/audit" element={<AuditPage />} />
-          <Route path="/soup" element={<SOUPPage />} />
-          <Route path="/docsync" element={<DocSyncPage />} />
-          <Route path="/guide" element={<GuidePage />} />
-        </Routes>
+      <main className="flex-1 ml-[260px] p-6 lg:p-8">
+        <div className="max-w-[1400px] mx-auto animate-fade-in">
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/forms" element={<FormsPage />} />
+            <Route path="/traceability" element={<TraceabilityPage />} />
+            <Route path="/audit" element={<AuditPage />} />
+            <Route path="/soup" element={<SOUPPage />} />
+            <Route path="/docsync" element={<DocSyncPage />} />
+            <Route path="/guide" element={<GuidePage />} />
+          </Routes>
+        </div>
       </main>
 
-      {/* AI Assistant floating panel */}
       <AIAssistant />
     </div>
   );

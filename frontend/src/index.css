@@ -2,6 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@layer base {
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: #F8FAFC;
+  }
+
+  ::selection {
+    background: rgba(14, 165, 233, 0.15);
+    color: #0B1120;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+}
+
+@layer components {
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .glass-dark {
+    background: rgba(11, 17, 32, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #0EA5E9, #8B5CF6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl border border-gray-100/80 shadow-card transition-all duration-200;
+  }
+
+  .card:hover {
+    @apply shadow-card-hover border-gray-200/80;
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-2.5 mx-2 rounded-xl text-sm font-medium transition-all duration-200;
+  }
+
+  .sidebar-item-active {
+    @apply bg-gradient-to-r from-teal/15 to-accent/10 text-white;
+  }
+
+  .sidebar-item-inactive {
+    @apply text-gray-400 hover:text-white hover:bg-white/[0.04];
+  }
+
+  .badge {
+    @apply text-[10px] font-semibold px-2.5 py-0.5 rounded-full;
+  }
+
+  .badge-pass { @apply bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/50; }
+  .badge-warn { @apply bg-amber-50 text-amber-700 ring-1 ring-amber-200/50; }
+  .badge-fail { @apply bg-red-50 text-red-700 ring-1 ring-red-200/50; }
 }
