@@ -59,7 +59,7 @@ export default function GuidePage() {
       content: (
         <div className="space-y-6">
           {/* Developers */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+          <div className="bg-gradient-to-r from-blue-50 to-sky-50/50 border border-blue-100/80 rounded-2xl p-6">
             <h4 className="font-semibold text-blue-900 mb-3">For Developers</h4>
             <div className="space-y-4">
               <div>
@@ -92,7 +92,7 @@ export default function GuidePage() {
           </div>
 
           {/* QA */}
-          <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
+          <div className="bg-gradient-to-r from-purple-50 to-violet-50/50 border border-purple-100/80 rounded-2xl p-6">
             <h4 className="font-semibold text-purple-900 mb-3">For QA Engineers</h4>
             <div className="space-y-4">
               <div>
@@ -124,7 +124,7 @@ export default function GuidePage() {
           </div>
 
           {/* QMS Manager */}
-          <div className="bg-teal/5 border border-teal/20 rounded-xl p-6">
+          <div className="bg-gradient-to-r from-teal/5 to-sky-50/30 border border-teal/10 rounded-2xl p-6">
             <h4 className="font-semibold text-gray-900 mb-3">For QMS Managers</h4>
             <div className="space-y-4">
               <div>
@@ -167,7 +167,7 @@ export default function GuidePage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
+              <tr className="bg-gradient-to-r from-gray-50 to-gray-50/50 border-b border-gray-100">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Template</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Title</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Standard</th>
@@ -196,10 +196,10 @@ export default function GuidePage() {
       icon: BookOpen,
       content: (
         <div className="space-y-6">
-          <div className="border border-gray-200 rounded-xl p-5">
+          <div className="bg-white border border-gray-100/80 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
             <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2"><span className="text-blue-500">Dashboard</span></h4>
             <p className="text-sm text-gray-600 mb-3">Real-time compliance scores from your repository. Shows IEC 62304, ISO 13485, Cybersecurity, and CE Mark scores.</p>
-            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
               <p><strong>Score &ge;80%</strong> = green (on track)</p>
               <p><strong>Score 60-80%</strong> = yellow (needs attention)</p>
               <p><strong>Score &lt;60%</strong> = red (immediate action required)</p>
@@ -207,10 +207,10 @@ export default function GuidePage() {
             </div>
           </div>
 
-          <div className="border border-gray-200 rounded-xl p-5">
+          <div className="bg-white border border-gray-100/80 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
             <h4 className="font-semibold text-gray-900 mb-2"><span className="text-blue-500">Forms</span></h4>
             <p className="text-sm text-gray-600 mb-3">Create, fill, sign, and approve regulatory forms. All 11 templates with complete fields per standard.</p>
-            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
               <p><strong>Create</strong>: Click "+ New" &rarr; select template &rarr; form opens in Draft</p>
               <p><strong>Fill</strong>: Complete all required fields (*) &rarr; click "Save"</p>
               <p><strong>Sign</strong>: Click "Sign" to add your electronic signature</p>
@@ -220,20 +220,20 @@ export default function GuidePage() {
             </div>
           </div>
 
-          <div className="border border-gray-200 rounded-xl p-5">
+          <div className="bg-white border border-gray-100/80 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
             <h4 className="font-semibold text-gray-900 mb-2"><span className="text-blue-500">Traceability</span></h4>
             <p className="text-sm text-gray-600 mb-3">Interactive graph showing REQ &rarr; Architecture &rarr; Code &rarr; Tests &rarr; Risk Controls.</p>
-            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
               <p><strong>Blue</strong> = Requirements | <strong>Purple</strong> = Architecture | <strong>Green</strong> = Code | <strong>Amber</strong> = Tests | <strong>Red</strong> = Risk Controls</p>
               <p><strong>Orphans</strong> (right panel): Items without connections = compliance gaps</p>
               <p className="mt-2">When an auditor asks "show me the test for REQ-FUNC-040", use this page to trace the path.</p>
             </div>
           </div>
 
-          <div className="border border-gray-200 rounded-xl p-5">
+          <div className="bg-white border border-gray-100/80 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
             <h4 className="font-semibold text-gray-900 mb-2"><span className="text-blue-500">Audit</span></h4>
             <p className="text-sm text-gray-600 mb-3">Simulate a real IEC 62304 audit. Three modes: Full, Random Commit, Random Requirement.</p>
-            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
               <p><strong>Full Audit</strong>: Checks all 20 IEC 62304 clauses (5.1-9.3). Use before external audit.</p>
               <p><strong>Random Commit</strong>: Picks a commit and traces to requirements + CI. Weekly spot-check.</p>
               <p><strong>Random Requirement</strong>: Picks a REQ and traces all evidence. Weekly spot-check.</p>
@@ -241,10 +241,10 @@ export default function GuidePage() {
             </div>
           </div>
 
-          <div className="border border-gray-200 rounded-xl p-5">
+          <div className="bg-white border border-gray-100/80 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
             <h4 className="font-semibold text-gray-900 mb-2"><span className="text-blue-500">SOUP</span></h4>
             <p className="text-sm text-gray-600 mb-3">Software of Unknown Provenance — tracks all dependencies and checks for CVE vulnerabilities.</p>
-            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
               <p><strong>Class C</strong> (red): Clinical data processing (nibabel, numpy, scipy, pydicom)</p>
               <p><strong>Class B</strong> (yellow): Core app logic (fastapi, react, firebase)</p>
               <p><strong>Class A</strong> (green): Dev/build tools (pytest, vite, typescript)</p>
@@ -252,10 +252,10 @@ export default function GuidePage() {
             </div>
           </div>
 
-          <div className="border border-gray-200 rounded-xl p-5">
+          <div className="bg-white border border-gray-100/80 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
             <h4 className="font-semibold text-gray-900 mb-2"><span className="text-blue-500">Doc Sync</span></h4>
             <p className="text-sm text-gray-600 mb-3">Tracks all regulatory documents with freshness indicators.</p>
-            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
               <p><strong>Green</strong> = Fresh (modified within 30 days)</p>
               <p><strong>Yellow</strong> = Review needed (30-90 days)</p>
               <p><strong>Red</strong> = Outdated (&gt;90 days) — update required</p>
@@ -272,7 +272,7 @@ export default function GuidePage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
+              <tr className="bg-gradient-to-r from-gray-50 to-gray-50/50 border-b border-gray-100">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Role</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Permissions</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Typical Person</th>
@@ -317,7 +317,7 @@ export default function GuidePage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
+              <tr className="bg-gradient-to-r from-gray-50 to-gray-50/50 border-b border-gray-100">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Clause</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Title</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">QMS Feature</th>
@@ -376,12 +376,12 @@ export default function GuidePage() {
           const isOpen = expandedSection === section.id;
           const Icon = section.icon;
           return (
-            <div key={section.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div key={section.id} className="bg-white rounded-2xl border border-gray-100/80 shadow-card hover:shadow-card-hover transition-all duration-200 overflow-hidden">
               <button
                 onClick={() => toggle(section.id)}
                 className="w-full flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition text-left"
               >
-                <div className="p-2 rounded-lg bg-teal/10">
+                <div className="p-2.5 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.1), rgba(139,92,246,0.08))' }}>
                   <Icon size={20} className="text-teal" />
                 </div>
                 <span className="flex-1 text-base font-semibold text-gray-900">{section.title}</span>

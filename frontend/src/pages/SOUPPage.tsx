@@ -56,31 +56,32 @@ export default function SOUPPage() {
           <p className="text-sm text-gray-500 mt-1">Software of Unknown Provenance — IEC 81001-5-1</p>
         </div>
         <button onClick={handleScan} disabled={scanning}
-          className="flex items-center gap-2 px-4 py-2 bg-teal text-white rounded-lg hover:bg-teal-light disabled:opacity-50">
-          <RefreshCw size={16} className={scanning ? 'animate-spin' : ''} /> {scanning ? 'Scanning...' : 'Scan for CVEs'}
+          className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold text-white rounded-xl disabled:opacity-50 transition-all duration-200 hover:shadow-lg hover:shadow-teal/20 active:scale-[0.98]"
+          style={{ background: 'linear-gradient(135deg, #0EA5E9, #0284C7)' }}>
+          <RefreshCw size={15} className={scanning ? 'animate-spin' : ''} /> {scanning ? 'Scanning...' : 'Scan for CVEs'}
         </button>
       </div>
 
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
             <p className="text-xs text-gray-500 mb-1">Total Dependencies</p>
             <p className="text-2xl font-bold text-gray-900">{summary.total_dependencies}</p>
             <p className="text-xs text-gray-400">{summary.backend} backend / {summary.frontend} frontend</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
             <p className="text-xs text-gray-500 mb-1">Class C (Safety)</p>
             <p className="text-2xl font-bold text-red-600">{summary.by_safety_class.C}</p>
             <p className="text-xs text-gray-400">Clinical data processing</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
             <p className="text-xs text-gray-500 mb-1">SBOM Status</p>
             <p className={`text-2xl font-bold ${summary.sbom_exists ? 'text-green-600' : 'text-red-600'}`}>
               {summary.sbom_exists ? 'Present' : 'Missing'}
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
             <p className="text-xs text-gray-500 mb-1">Review Records</p>
             <p className="text-2xl font-bold text-blue-600">{summary.review_records}</p>
             <p className="text-xs text-gray-400">{summary.review_coverage_pct}% coverage</p>
@@ -100,7 +101,7 @@ export default function SOUPPage() {
 
       {/* CVE Scan Results */}
       {scan && scan.vulnerabilities.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
+        <div className="bg-gradient-to-r from-red-50 to-orange-50/50 border border-red-200/60 rounded-2xl p-6 mb-8">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle size={20} className="text-red-600" />
             <h3 className="font-semibold text-red-800">Vulnerabilities Found</h3>
@@ -134,7 +135,7 @@ export default function SOUPPage() {
       )}
 
       {/* Dependencies Table */}
-      <div className="bg-white rounded-xl border border-gray-200">
+      <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card">
         <div className="p-4 border-b border-gray-100 flex items-center gap-4">
           <div className="relative flex-1">
             <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />

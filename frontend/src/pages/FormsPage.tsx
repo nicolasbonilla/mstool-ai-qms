@@ -35,10 +35,10 @@ interface TemplateField {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-700',
-  in_review: 'bg-yellow-100 text-yellow-700',
-  approved: 'bg-green-100 text-green-700',
-  superseded: 'bg-red-100 text-red-700',
+  draft: 'bg-gray-100 text-gray-600 ring-1 ring-gray-200/50',
+  in_review: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/50',
+  approved: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/50',
+  superseded: 'bg-red-50 text-red-600 ring-1 ring-red-200/50',
 };
 
 const STATUS_ICONS: Record<string, React.ElementType> = {
@@ -175,23 +175,24 @@ export default function FormsPage() {
       {/* Left Panel */}
       <div className="w-96 flex flex-col shrink-0">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-gray-900">Forms</h1>
+          <h1 className="text-xl font-extrabold tracking-tight text-gray-900">Forms</h1>
           <button
             onClick={() => setShowCreate(!showCreate)}
-            className="flex items-center gap-1 text-sm bg-teal text-white px-3 py-1.5 rounded-lg hover:bg-teal-light"
+            className="flex items-center gap-1.5 text-[13px] font-semibold text-white px-4 py-2 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-teal/20 active:scale-[0.98]"
+            style={{ background: 'linear-gradient(135deg, #0EA5E9, #0284C7)' }}
           >
-            <Plus size={16} /> New
+            <Plus size={15} /> New Form
           </button>
         </div>
 
         {showCreate && (
-          <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-4 mb-4 max-h-72 overflow-y-auto">
-            <p className="text-xs text-gray-500 mb-2 font-medium uppercase">Select Template</p>
+          <div className="bg-white border border-gray-100/80 rounded-2xl shadow-lg shadow-gray-200/50 p-4 mb-4 max-h-72 overflow-y-auto">
+            <p className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-widest">Select Template</p>
             {templates.map((t) => (
               <button
                 key={t.template_id}
                 onClick={() => createForm(t.template_id)}
-                className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded-lg text-sm flex items-center justify-between"
+                className="w-full text-left px-3 py-2.5 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50/30 rounded-xl text-sm flex items-center justify-between transition-all duration-150"
               >
                 <span>
                   <span className="font-mono text-xs text-gray-400 mr-2">{t.template_id}</span>
@@ -208,12 +209,12 @@ export default function FormsPage() {
             <Search size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
             <input
               type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search..." className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-teal"
+              placeholder="Search..." className="w-full pl-8 pr-3 py-2 text-[13px] border border-gray-200 rounded-xl focus:outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10 transition-all"
             />
           </div>
           <select
             value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-2 py-2 focus:outline-none focus:border-teal"
+            className="text-[13px] border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10 transition-all"
           >
             <option value="">All</option>
             <option value="draft">Draft</option>
@@ -228,8 +229,8 @@ export default function FormsPage() {
             return (
               <div
                 key={form.id} onClick={() => selectForm(form)}
-                className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                  selectedForm?.id === form.id ? 'border-teal bg-teal/5' : 'border-gray-200 bg-white hover:border-gray-300'
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 ${
+                  selectedForm?.id === form.id ? 'border-teal/30 bg-gradient-to-r from-sky-50/50 to-blue-50/30 shadow-md shadow-teal/5' : 'border-gray-100/80 bg-white shadow-sm hover:shadow-md hover:border-gray-200'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -257,7 +258,7 @@ export default function FormsPage() {
       {/* Right Panel */}
       <div className="flex-1 overflow-y-auto">
         {selectedForm ? (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
@@ -272,19 +273,21 @@ export default function FormsPage() {
                   <p className="text-xs text-gray-400 mt-1">ID: {selectedForm.id} | Created: {selectedForm.created_at ? new Date(selectedForm.created_at).toLocaleString() : ''}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={downloadPDF} className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5 border border-gray-200 rounded-lg">
-                    <Download size={14} /> PDF
+                  <button onClick={downloadPDF} className="flex items-center gap-1.5 text-[12px] font-semibold text-gray-600 hover:text-gray-900 px-3 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all">
+                    <Download size={13} /> PDF
                   </button>
-                  <button onClick={signForm} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 px-3 py-1.5 border border-blue-200 rounded-lg">
-                    <PenTool size={14} /> Sign
+                  <button onClick={signForm} className="flex items-center gap-1.5 text-[12px] font-semibold text-blue-600 hover:text-blue-800 px-3 py-2 border border-blue-200 rounded-xl hover:bg-blue-50 transition-all">
+                    <PenTool size={13} /> Sign
                   </button>
                   {selectedForm.status !== 'approved' && (
-                    <button onClick={approveForm} className="flex items-center gap-1 text-sm text-green-600 hover:text-green-800 px-3 py-1.5 border border-green-200 rounded-lg">
-                      <CheckCircle2 size={14} /> Approve
+                    <button onClick={approveForm} className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-600 hover:text-emerald-800 px-3 py-2 border border-emerald-200 rounded-xl hover:bg-emerald-50 transition-all">
+                      <CheckCircle2 size={13} /> Approve
                     </button>
                   )}
-                  <button onClick={saveForm} disabled={saving} className="flex items-center gap-1 text-sm bg-teal text-white px-4 py-1.5 rounded-lg hover:bg-teal-light disabled:opacity-50">
-                    <Save size={14} /> {saving ? 'Saving...' : 'Save'}
+                  <button onClick={saveForm} disabled={saving}
+                    className="flex items-center gap-1.5 text-[12px] font-semibold text-white px-4 py-2 rounded-xl disabled:opacity-50 transition-all duration-200 hover:shadow-lg hover:shadow-teal/20 active:scale-[0.98]"
+                    style={{ background: 'linear-gradient(135deg, #0EA5E9, #0284C7)' }}>
+                    <Save size={13} /> {saving ? 'Saving...' : 'Save'}
                   </button>
                 </div>
               </div>
@@ -294,7 +297,7 @@ export default function FormsPage() {
               {Object.keys(sections).length > 0 ? (
                 Object.entries(sections).map(([sectionName, fields]) => (
                   <div key={sectionName}>
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4 pb-2 border-b border-gray-100">
+                    <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4 pb-2 border-b border-gray-100">
                       {sectionName}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -308,12 +311,12 @@ export default function FormsPage() {
                           {field.field_type === 'textarea' ? (
                             <textarea
                               value={selectedForm.fields[field.name] || ''} onChange={(e) => updateField(field.name, e.target.value)}
-                              rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal"
+                              rows={3} className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10 transition-all"
                             />
                           ) : field.field_type === 'select' ? (
                             <select
                               value={selectedForm.fields[field.name] || ''} onChange={(e) => updateField(field.name, e.target.value)}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal"
+                              className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10 transition-all"
                             >
                               <option value="">Select...</option>
                               {field.options?.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
@@ -327,7 +330,7 @@ export default function FormsPage() {
                             <input
                               type={field.field_type === 'date' ? 'date' : field.field_type === 'number' ? 'number' : 'text'}
                               value={selectedForm.fields[field.name] || ''} onChange={(e) => updateField(field.name, e.target.value)}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal"
+                              className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10 transition-all"
                             />
                           )}
                         </div>
@@ -345,7 +348,7 @@ export default function FormsPage() {
                       <div key={key} className="mb-3">
                         <label className="block text-sm text-gray-600 mb-1">{key}</label>
                         <input type="text" value={val} onChange={(e) => updateField(key, e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal" />
+                          className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-[13px] focus:outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10 transition-all" />
                       </div>
                     ))
                   ) : (
@@ -361,7 +364,7 @@ export default function FormsPage() {
                   </h3>
                   <div className="space-y-2">
                     {selectedForm.signatures.map((sig, i) => (
-                      <div key={i} className="flex items-center gap-4 p-3 bg-green-50 rounded-lg border border-green-100">
+                      <div key={i} className="flex items-center gap-4 p-3.5 bg-gradient-to-r from-emerald-50 to-green-50/50 rounded-xl border border-emerald-100/80">
                         <CheckCircle2 size={18} className="text-green-600 shrink-0" />
                         <div>
                           <p className="text-sm font-medium text-gray-800">{sig.user}</p>

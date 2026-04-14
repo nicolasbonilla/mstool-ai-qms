@@ -48,8 +48,7 @@ export default function AuditPage() {
     } catch { /* */ }
   };
 
-  const getScoreColor = (s: number) => s >= 90 ? 'text-green-500' : s >= 70 ? 'text-yellow-500' : 'text-red-500';
-  const getScoreRing = (s: number) => s >= 90 ? 'border-green-500' : s >= 70 ? 'border-yellow-500' : 'border-red-500';
+  // Score colors used inline in SVG
 
   const groups = result?.questions.reduce<Record<string, AuditQuestion[]>>((acc, q) => {
     if (!acc[q.group]) acc[q.group] = [];
@@ -74,16 +73,17 @@ export default function AuditPage() {
       {error && <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6"><p className="text-red-700 text-sm">{error}</p></div>}
 
       {!result && !loading && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
           {MODES.map((mode) => (
             <button key={mode.id} onClick={() => handleRun(mode.id)}
-              className="bg-white rounded-xl border border-gray-200 p-6 text-left hover:border-teal hover:shadow-md transition-all group">
-              <div className="p-3 rounded-xl bg-teal/10 group-hover:bg-teal/20 transition inline-block mb-4">
-                <mode.icon size={24} className="text-teal" />
+              className="bg-white rounded-2xl border border-gray-100/80 p-6 text-left shadow-card hover:shadow-card-hover hover:border-teal/30 transition-all duration-200 group active:scale-[0.98]">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-teal/10"
+                style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.1), rgba(139,92,246,0.08))' }}>
+                <mode.icon size={22} className="text-teal" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">{mode.title}</h3>
-              <p className="text-sm text-gray-500 mt-2">{mode.desc}</p>
-              <div className="flex items-center gap-4 mt-4 text-xs text-gray-400">
+              <h3 className="text-[15px] font-bold text-gray-900">{mode.title}</h3>
+              <p className="text-[13px] text-gray-500 mt-2 leading-relaxed">{mode.desc}</p>
+              <div className="flex items-center gap-4 mt-4 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
                 <span>{mode.checks} checks</span><span>{mode.time}</span>
               </div>
             </button>
@@ -101,33 +101,43 @@ export default function AuditPage() {
 
       {result && !loading && (
         <div>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl border border-gray-200 p-8 flex flex-col items-center justify-center">
-              <div className={`w-32 h-32 rounded-full border-8 ${getScoreRing(result.readiness_score)} flex items-center justify-center`}>
-                <span className={`text-4xl font-bold ${getScoreColor(result.readiness_score)}`}>{result.readiness_score}%</span>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 mb-8">
+            <div className="relative overflow-hidden rounded-2xl p-8 flex flex-col items-center justify-center" style={{ background: 'linear-gradient(135deg, #0B1120, #1A2540)' }}>
+              <div className="absolute -top-12 -right-12 w-40 h-40 bg-teal/10 rounded-full blur-[60px]" />
+              <div className="relative">
+                <svg width="120" height="120" style={{ transform: 'rotate(-90deg)', filter: `drop-shadow(0 0 14px ${result.readiness_score >= 80 ? '#10B98150' : '#F59E0B50'})` }}>
+                  <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
+                  <circle cx="60" cy="60" r="50" fill="none" stroke={result.readiness_score >= 80 ? '#10B981' : result.readiness_score >= 60 ? '#F59E0B' : '#EF4444'} strokeWidth="10"
+                    strokeDasharray={314} strokeDashoffset={314 - (result.readiness_score / 100) * 314}
+                    strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1.2s ease-out' }} />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-[26px] font-extrabold text-white">{result.readiness_score}%</span>
+                </div>
               </div>
-              <p className="text-sm text-gray-500 mt-3">Readiness Score</p>
-              <p className="text-xs text-gray-400 mt-1">Mode: {result.mode}</p>
+              <p className="text-[13px] font-semibold text-white/80 mt-3">Readiness Score</p>
+              <p className="text-[10px] text-white/30 mt-0.5">Mode: {result.mode}</p>
             </div>
             {[
-              { label: 'Strong', count: result.summary.strong, color: 'green', icon: CheckCircle2, desc: 'Full evidence' },
-              { label: 'Adequate', count: result.summary.adequate, color: 'yellow', icon: Clock, desc: 'Partial evidence' },
-              { label: 'Weak/Missing', count: result.summary.weak + result.summary.missing, color: 'red', icon: XCircle, desc: 'Needs attention' },
-            ].map(({ label, count, color, icon: Icon, desc }) => (
-              <div key={label} className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <Icon size={18} className={`text-${color}-500`} /><span className="text-sm font-medium text-gray-700">{label}</span>
+              { label: 'Strong', count: result.summary.strong, bg: 'bg-emerald-500/10', text: 'text-emerald-600', icon: CheckCircle2, desc: 'Full evidence' },
+              { label: 'Adequate', count: result.summary.adequate, bg: 'bg-amber-500/10', text: 'text-amber-600', icon: Clock, desc: 'Partial evidence' },
+              { label: 'Weak/Missing', count: result.summary.weak + result.summary.missing, bg: 'bg-red-500/10', text: 'text-red-500', icon: XCircle, desc: 'Needs attention' },
+            ].map(({ label, count, bg, text, icon: Icon, desc }) => (
+              <div key={label} className="bg-white rounded-2xl border border-gray-100/80 shadow-card hover:shadow-card-hover transition-all duration-200 p-6">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}><Icon size={16} className={text} /></div>
+                  <span className="text-[13px] font-bold text-gray-700">{label}</span>
                 </div>
-                <span className={`text-3xl font-bold text-${color}-600`}>{count}</span>
-                <p className="text-xs text-gray-400 mt-1">{desc}</p>
+                <span className={`text-[28px] font-extrabold ${text}`}>{count}</span>
+                <p className="text-[11px] text-gray-400 mt-1">{desc}</p>
               </div>
             ))}
           </div>
 
           {groups && Object.entries(groups).map(([group, questions]) => (
             <div key={group} className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">{group}</h3>
-              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">{group}</h3>
+              <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card divide-y divide-gray-50">
                 {questions.map((q) => {
                   const style = SCORE_STYLES[q.score] || SCORE_STYLES.missing;
                   const Icon = style.icon;
@@ -144,7 +154,7 @@ export default function AuditPage() {
                         <ChevronDown size={16} className={`text-gray-400 transition ${isOpen ? 'rotate-180' : ''}`} />
                       </button>
                       {isOpen && (
-                        <div className="px-6 pb-4 bg-gray-50">
+                        <div className="px-6 pb-4 bg-gradient-to-b from-gray-50/80 to-white">
                           <div className="ml-12">
                             <p className="text-xs font-medium text-gray-500 mb-2">Checks:</p>
                             <ul className="text-xs text-gray-600 space-y-1 mb-3">{q.checks.map((c, i) => <li key={i}>- {c}</li>)}</ul>
@@ -170,10 +180,10 @@ export default function AuditPage() {
 
           {result.gaps.length > 0 && (
             <div className="mb-8">
-              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Identified Gaps</h3>
-              <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
+              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Identified Gaps</h3>
+              <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card p-6 space-y-3">
                 {result.gaps.map((gap, i) => (
-                  <div key={i} className={`p-4 rounded-lg border ${gap.severity === 'critical' ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
+                  <div key={i} className={`p-4 rounded-xl border ${gap.severity === 'critical' ? 'bg-gradient-to-r from-red-50 to-orange-50/50 border-red-200/60' : 'bg-gradient-to-r from-amber-50 to-yellow-50/50 border-amber-200/60'}`}>
                     <span className={`text-xs font-bold uppercase ${gap.severity === 'critical' ? 'text-red-700' : 'text-yellow-700'}`}>{gap.severity}</span>
                     <span className="font-mono text-xs text-gray-500 ml-2">Clause {gap.clause}</span>
                     <p className="text-sm text-gray-700 mt-1">{gap.recommendation}</p>
