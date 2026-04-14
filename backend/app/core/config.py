@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # CORS
-    CORS_ORIGINS: str = "http://localhost:5174,http://localhost:3000"
+    CORS_ORIGINS: str = "http://localhost:5174,http://localhost:3000,https://mstool-ai-qms.web.app,https://mstool-ai-qms.firebaseapp.com"
 
     # MSTool-AI connection (the medical device app we monitor)
     MSTOOL_AI_REPO_PATH: str = ""  # Local path to medical-imaging-viewer repo

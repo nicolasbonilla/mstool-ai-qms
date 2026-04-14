@@ -1,43 +1,41 @@
 """
 Compliance Dashboard API routes — MSTool-AI-QMS.
 
-Real-time compliance scoring, auth coverage analysis,
-document inventory, and test coverage reporting.
+Real-time compliance scoring via GitHub API analysis.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
-from app.core.config import get_settings
+
+from app.core.auth import get_current_user, CurrentUser
 
 router = APIRouter(prefix="/compliance", tags=["Compliance Dashboard"])
-
-settings = get_settings()
 
 
 def _get_service():
     from app.services.compliance_service import ComplianceService
-    return ComplianceService(settings.MSTOOL_AI_REPO_PATH)
+    return ComplianceService()
 
 
 @router.get("/score")
-async def get_compliance_score():
+async def get_compliance_score(user: CurrentUser = Depends(get_current_user)):
     """Compute and return real-time compliance score with breakdown."""
     try:
         service = _get_service()
         return service.compute_full_score()
-    except ValueError as e:
+    except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
 
 
 @router.get("/auth-coverage")
-async def get_auth_coverage():
+async def get_auth_coverage(user: CurrentUser = Depends(get_current_user)):
     """Detailed authentication coverage per route file."""
     service = _get_service()
     return service.get_auth_coverage_detail()
 
 
 @router.get("/documents")
-async def list_documents(standard: Optional[str] = None):
+async def list_documents(standard: Optional[str] = None, user: CurrentUser = Depends(get_current_user)):
     """List all regulatory documents with freshness indicators."""
     service = _get_service()
     docs = service.get_document_inventory()
@@ -47,8 +45,29 @@ async def list_documents(standard: Optional[str] = None):
 
 
 @router.get("/tests")
-async def list_tests():
+async def list_tests(user: CurrentUser = Depends(get_current_user)):
     """List all test files with metadata."""
     service = _get_service()
     tests = service.get_test_inventory()
     return {"tests": tests, "total": len(tests)}
+
+
+@router.get("/commits")
+async def get_commits(count: int = 30, user: CurrentUser = Depends(get_current_user)):
+    """Get recent commits from the monitored repository."""
+    service = _get_service()
+    return {"commits": service.get_commits(count)}
+
+
+@router.get("/pull-requests")
+async def get_pull_requests(state: str = "all", count: int = 30, user: CurrentUser = Depends(get_current_user)):
+    """Get pull requests from the monitored repository."""
+    service = _get_service()
+    return {"pull_requests": service.get_pull_requests(state, count)}
+
+
+@router.get("/ci-runs")
+async def get_ci_runs(count: int = 10, user: CurrentUser = Depends(get_current_user)):
+    """Get CI workflow runs from the monitored repository."""
+    service = _get_service()
+    return {"ci_runs": service.get_ci_runs(count)}

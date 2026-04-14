@@ -2,20 +2,19 @@
 Form Manager API routes — MSTool-AI-QMS.
 
 Digital versions of TPL-01 through TPL-11 audit templates.
-Supports creation, editing, AI auto-fill, signatures, and PDF export.
+Persisted in Firestore. All actions logged to audit trail.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.models.schemas import CreateFormRequest, UpdateFormRequest
+from app.core.auth import get_current_user, require_editor, CurrentUser
+from app.services.firestore_service import FirestoreService
 
 router = APIRouter(prefix="/forms", tags=["Form Manager"])
-
-# In-memory store (replace with database in production)
-_forms_db: dict = {}
 
 TEMPLATES = {
     "TPL-01": {"title": "Problem Report", "standard": "IEC 62304 Clause 9"},
@@ -43,82 +42,173 @@ async def list_templates():
 
 @router.get("/templates/{template_id}")
 async def get_template(template_id: str):
-    """Get template details with field definitions."""
+    """Get template details."""
     if template_id not in TEMPLATES:
         raise HTTPException(status_code=404, detail=f"Template {template_id} not found")
     return {"template_id": template_id, **TEMPLATES[template_id]}
 
 
+@router.get("/templates/{template_id}/fields")
+async def get_template_fields(template_id: str):
+    """Get all field definitions for a template."""
+    if template_id not in TEMPLATES:
+        raise HTTPException(status_code=404, detail=f"Template {template_id} not found")
+    try:
+        from app.services.form_templates import get_template_fields
+        fields = get_template_fields(template_id)
+        return {"template_id": template_id, "fields": fields}
+    except ImportError:
+        return {"template_id": template_id, "fields": []}
+
+
 @router.post("/")
-async def create_form(request: CreateFormRequest):
-    """Create a new form from template."""
+async def create_form(request: CreateFormRequest, user: CurrentUser = Depends(require_editor)):
+    """Create a new form from template. Requires editor role."""
     if request.template_id not in TEMPLATES:
         raise HTTPException(status_code=404, detail="Template not found")
 
     form_id = str(uuid.uuid4())[:8]
-    form = {
-        "id": form_id,
+    form_data = {
         "template_id": request.template_id,
         "title": request.title or TEMPLATES[request.template_id]["title"],
         "status": "draft",
         "version": 1,
-        "created_at": datetime.utcnow().isoformat(),
-        "updated_at": datetime.utcnow().isoformat(),
+        "created_by": user.email,
         "fields": {},
         "signatures": [],
     }
-    _forms_db[form_id] = form
+
+    form = FirestoreService.create_form(form_id, form_data)
+
+    FirestoreService.log_action(
+        user_uid=user.uid, user_email=user.email,
+        action="create_form", resource_type="form",
+        resource_id=form_id, details={"template_id": request.template_id},
+    )
+
     return form
 
 
 @router.get("/")
-async def list_forms(template_id: Optional[str] = None, status: Optional[str] = None):
-    """List all forms with optional filters."""
-    forms = list(_forms_db.values())
-    if template_id:
-        forms = [f for f in forms if f["template_id"] == template_id]
-    if status:
-        forms = [f for f in forms if f["status"] == status]
+async def list_forms(
+    template_id: Optional[str] = None,
+    status: Optional[str] = None,
+    user: CurrentUser = Depends(get_current_user),
+):
+    """List all forms with optional filters. Requires authentication."""
+    forms = FirestoreService.list_forms(template_id=template_id, status=status)
     return {"forms": forms, "total": len(forms)}
 
 
 @router.get("/{form_id}")
-async def get_form(form_id: str):
-    """Get form details."""
-    if form_id not in _forms_db:
+async def get_form(form_id: str, user: CurrentUser = Depends(get_current_user)):
+    """Get form details. Requires authentication."""
+    form = FirestoreService.get_form(form_id)
+    if not form:
         raise HTTPException(status_code=404, detail="Form not found")
-    return _forms_db[form_id]
+    return form
 
 
 @router.put("/{form_id}")
-async def update_form(form_id: str, request: UpdateFormRequest):
-    """Update form fields."""
-    if form_id not in _forms_db:
+async def update_form(
+    form_id: str,
+    request: UpdateFormRequest,
+    user: CurrentUser = Depends(require_editor),
+):
+    """Update form fields. Requires editor role."""
+    form = FirestoreService.get_form(form_id)
+    if not form:
         raise HTTPException(status_code=404, detail="Form not found")
-    _forms_db[form_id]["fields"].update(request.fields)
-    _forms_db[form_id]["updated_at"] = datetime.utcnow().isoformat()
-    return _forms_db[form_id]
+
+    existing_fields = form.get("fields", {})
+    existing_fields.update(request.fields)
+
+    updated = FirestoreService.update_form(form_id, {"fields": existing_fields})
+
+    FirestoreService.log_action(
+        user_uid=user.uid, user_email=user.email,
+        action="update_form", resource_type="form",
+        resource_id=form_id, details={"updated_fields": list(request.fields.keys())},
+    )
+
+    return updated
 
 
 @router.post("/{form_id}/sign")
-async def sign_form(form_id: str, user: str = "admin", role: str = "QMS Manager"):
-    """Add electronic signature."""
-    if form_id not in _forms_db:
+async def sign_form(form_id: str, user: CurrentUser = Depends(get_current_user)):
+    """Add electronic signature from the authenticated user."""
+    form = FirestoreService.get_form(form_id)
+    if not form:
         raise HTTPException(status_code=404, detail="Form not found")
-    _forms_db[form_id]["signatures"].append({
-        "user": user,
-        "role": role,
-        "signed_at": datetime.utcnow().isoformat(),
+
+    signatures = form.get("signatures", [])
+    signatures.append({
+        "user": user.email,
+        "role": user.role,
+        "signed_at": datetime.now(timezone.utc).isoformat(),
         "signature_type": "approver",
     })
-    return _forms_db[form_id]
+
+    updated = FirestoreService.update_form(form_id, {"signatures": signatures})
+
+    FirestoreService.log_action(
+        user_uid=user.uid, user_email=user.email,
+        action="sign_form", resource_type="form",
+        resource_id=form_id,
+    )
+
+    return updated
 
 
 @router.post("/{form_id}/approve")
-async def approve_form(form_id: str):
-    """Approve form (changes status to approved)."""
-    if form_id not in _forms_db:
+async def approve_form(form_id: str, user: CurrentUser = Depends(require_editor)):
+    """Approve form (changes status to approved). Requires editor role."""
+    form = FirestoreService.get_form(form_id)
+    if not form:
         raise HTTPException(status_code=404, detail="Form not found")
-    _forms_db[form_id]["status"] = "approved"
-    _forms_db[form_id]["updated_at"] = datetime.utcnow().isoformat()
-    return _forms_db[form_id]
+
+    updated = FirestoreService.update_form(form_id, {"status": "approved"})
+
+    FirestoreService.log_action(
+        user_uid=user.uid, user_email=user.email,
+        action="approve_form", resource_type="form",
+        resource_id=form_id,
+    )
+
+    return updated
+
+
+@router.get("/{form_id}/pdf")
+async def export_form_pdf(form_id: str, user: CurrentUser = Depends(get_current_user)):
+    """Export form as PDF."""
+    from fastapi.responses import Response
+    form = FirestoreService.get_form(form_id)
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    try:
+        from app.services.pdf_service import PDFService
+        template_config = TEMPLATES.get(form.get("template_id", ""), {})
+        pdf_bytes = PDFService.generate_form_pdf(form, template_config)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={form.get('template_id', 'form')}_{form_id}.pdf"},
+        )
+    except ImportError:
+        raise HTTPException(status_code=501, detail="PDF service not available")
+
+
+@router.delete("/{form_id}")
+async def delete_form(form_id: str, user: CurrentUser = Depends(require_editor)):
+    """Delete a form. Requires editor role."""
+    deleted = FirestoreService.delete_form(form_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Form not found")
+
+    FirestoreService.log_action(
+        user_uid=user.uid, user_email=user.email,
+        action="delete_form", resource_type="form",
+        resource_id=form_id,
+    )
+
+    return {"status": "deleted", "id": form_id}

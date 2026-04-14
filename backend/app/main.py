@@ -34,10 +34,15 @@ app.add_middleware(
 )
 
 # Routes
-from app.api.routes import compliance, forms
+from app.api.routes import compliance, forms, users, traceability, audit, soup, ai
 
 app.include_router(compliance.router, prefix=settings.API_V1_STR)
 app.include_router(forms.router, prefix=settings.API_V1_STR)
+app.include_router(users.router, prefix=settings.API_V1_STR)
+app.include_router(traceability.router, prefix=settings.API_V1_STR)
+app.include_router(audit.router, prefix=settings.API_V1_STR)
+app.include_router(soup.router, prefix=settings.API_V1_STR)
+app.include_router(ai.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/", tags=["Health"])

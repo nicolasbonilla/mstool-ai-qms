@@ -16,6 +16,9 @@ fastmcp==2.3.0
 # AI (Claude API for agents)
 anthropic==0.44.0
 
+# Firebase Admin SDK
+firebase-admin>=6.5.0
+
 # Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
