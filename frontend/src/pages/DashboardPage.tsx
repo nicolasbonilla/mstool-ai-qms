@@ -7,6 +7,7 @@ import {
   ShieldCheck, Code, FileText, Users, Bug, Sparkles, ArrowUpRight,
   ArrowRight,
 } from 'lucide-react';
+import DashboardSkeleton from '../components/ui/DashboardSkeleton';
 
 /* ─── Types ─── */
 interface Evidence { file: string; github_url: string; detail: string; status: string }
@@ -86,14 +87,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-[60vh]">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-10 h-10 rounded-full border-[3px] border-teal/20 border-t-teal animate-spin" />
-        <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Analyzing repository compliance...</p>
-      </div>
-    </div>
-  );
+  if (loading) return <DashboardSkeleton />;
   if (!data) return null;
 
   const checksMap = Object.fromEntries(data.checks.map(c => [c.id, c]));

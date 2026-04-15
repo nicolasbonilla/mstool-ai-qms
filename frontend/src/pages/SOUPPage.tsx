@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, RefreshCw, Search, ChevronDown, Shield, Package } from 'lucide-react';
 import { getDependencies, getSOUPSummary, scanVulnerabilities } from '../api/soup';
+import PageSkeleton from '../components/ui/PageSkeleton';
 
 /* ─── Types ─── */
 interface Dependency { name: string; version: string; source: string; safety_class: string; license: string | null; pinned: boolean }
@@ -41,11 +42,7 @@ export default function SOUPPage() {
     setScanning(false);
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-[60vh]">
-      <div className="w-8 h-8 rounded-full border-[3px] border-teal/20 border-t-teal animate-spin" />
-    </div>
-  );
+  if (loading) return <PageSkeleton rows={4} />;
 
   const filtered = deps.filter(d => {
     if (search && !d.name.toLowerCase().includes(search.toLowerCase())) return false;

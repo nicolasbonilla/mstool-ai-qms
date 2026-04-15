@@ -3,6 +3,7 @@ import { ReactFlow, MiniMap, Controls, Background, Node, Edge, Position } from '
 import '@xyflow/react/dist/style.css';
 import { getTraceabilityGraph } from '../api/compliance';
 import { AlertTriangle, GitBranch } from 'lucide-react';
+import PageSkeleton from '../components/ui/PageSkeleton';
 
 interface GraphData {
   nodes: { id: string; type: string; label: string; metadata: Record<string, any> }[];
@@ -118,7 +119,7 @@ export default function TraceabilityPage() {
     setSelectedNode(node.id);
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal" /></div>;
+  if (loading) return <PageSkeleton rows={2} />;
   if (error) return <div className="bg-red-50 border border-red-200 rounded-lg p-6"><p className="text-red-700">{error}</p></div>;
   if (!data) return null;
 
