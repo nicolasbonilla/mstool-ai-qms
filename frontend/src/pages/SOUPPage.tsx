@@ -8,7 +8,7 @@ interface Summary { total_dependencies: number; backend: number; frontend: numbe
 interface ScanResult { scanned_at: string; vulnerabilities: { cve_id: string; package: string; severity: string; cvss_score: number; description: string }[]; summary: { critical: number; high: number; medium: number; low: number }; }
 
 const CLASS_COLORS: Record<string, string> = { A: 'bg-green-100 text-green-700', B: 'bg-yellow-100 text-yellow-700', C: 'bg-red-100 text-red-700' };
-const SEV_COLORS: Record<string, string> = { CRITICAL: 'bg-red-700 text-white', HIGH: 'bg-red-500 text-white', MEDIUM: 'bg-orange-400 text-white', LOW: 'bg-yellow-400 text-gray-800' };
+const SEV_COLORS: Record<string, string> = { CRITICAL: 'bg-red-700 text-white', HIGH: 'bg-red-500 text-white', MEDIUM: 'bg-orange-400 text-white', LOW: 'bg-yellow-400 text-[var(--text-primary)]' };
 const PIE_COLORS = ['#10B981', '#F59E0B', '#EF4444'];
 
 export default function SOUPPage() {
@@ -65,28 +65,28 @@ export default function SOUPPage() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
+          <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
             <p className="text-xs text-[var(--text-muted)] mb-1">Total Dependencies</p>
             <p className="text-2xl font-bold text-[var(--text-primary)]">{summary.total_dependencies}</p>
             <p className="text-xs text-[var(--text-muted)]">{summary.backend} backend / {summary.frontend} frontend</p>
           </div>
-          <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
+          <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
             <p className="text-xs text-[var(--text-muted)] mb-1">Class C (Safety)</p>
             <p className="text-2xl font-bold text-red-600">{summary.by_safety_class.C}</p>
             <p className="text-xs text-[var(--text-muted)]">Clinical data processing</p>
           </div>
-          <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
+          <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
             <p className="text-xs text-[var(--text-muted)] mb-1">SBOM Status</p>
             <p className={`text-2xl font-bold ${summary.sbom_exists ? 'text-green-600' : 'text-red-600'}`}>
               {summary.sbom_exists ? 'Present' : 'Missing'}
             </p>
           </div>
-          <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
+          <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
             <p className="text-xs text-[var(--text-muted)] mb-1">Review Records</p>
             <p className="text-2xl font-bold text-blue-600">{summary.review_records}</p>
             <p className="text-xs text-[var(--text-muted)]">{summary.review_coverage_pct}% coverage</p>
           </div>
-          <div className="bg-white rounded-xl border border-[var(--border-default)] p-5 flex items-center justify-center">
+          <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-default)] p-5 flex items-center justify-center">
             <ResponsiveContainer width={100} height={80}>
               <PieChart>
                 <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={20} outerRadius={35}>
@@ -135,7 +135,7 @@ export default function SOUPPage() {
       )}
 
       {/* Dependencies Table */}
-      <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card">
+      <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card">
         <div className="p-4 border-b border-[var(--card-border)] flex items-center gap-4">
           <div className="relative flex-1">
             <Search size={14} className="absolute left-3 top-2.5 text-[var(--text-muted)]" />
@@ -159,7 +159,7 @@ export default function SOUPPage() {
             </tr></thead>
             <tbody>
               {filtered.map((d, i) => (
-                <tr key={i} className="border-b border-[var(--border-subtle)] hover:bg-gray-50">
+                <tr key={i} className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-tertiary)]">
                   <td className="px-4 py-3 font-medium">{d.name}</td>
                   <td className="px-4 py-3 font-mono text-xs">{d.version}</td>
                   <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${d.source === 'backend' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{d.source}</span></td>

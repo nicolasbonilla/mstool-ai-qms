@@ -79,7 +79,7 @@ export default function DocSyncPage() {
           className={`px-4 py-1.5 text-sm rounded-xl font-medium transition-all duration-200 ${
             !filter
               ? 'bg-gradient-to-r from-navy to-navy-light text-white shadow-sm'
-              : 'bg-white text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--bg-tertiary)] hover:border-gray-300'
+              : 'bg-[var(--card-bg)] text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--bg-tertiary)] hover:border-gray-300'
           }`}
         >All ({docs.length})</button>
         {standards.map(s => (
@@ -89,7 +89,7 @@ export default function DocSyncPage() {
             className={`px-4 py-1.5 text-sm rounded-xl font-medium transition-all duration-200 ${
               filter === s
                 ? 'bg-gradient-to-r from-navy to-navy-light text-white shadow-sm'
-                : 'bg-white text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--bg-tertiary)] hover:border-gray-300'
+                : 'bg-[var(--card-bg)] text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--bg-tertiary)] hover:border-gray-300'
             }`}
           >{s} ({docs.filter(d => d.standard === s).length})</button>
         ))}
@@ -102,11 +102,11 @@ export default function DocSyncPage() {
           return (
             <div
               key={doc.path}
-              className="bg-white rounded-2xl shadow-card border border-[var(--card-border)] p-5 hover:shadow-card-hover hover:scale-[1.02] transition-all duration-200 cursor-default group"
+              className="bg-[var(--card-bg)] rounded-2xl shadow-card border border-[var(--card-border)] p-5 hover:shadow-card-hover hover:scale-[1.02] transition-all duration-200 cursor-default group"
             >
               {/* Top row: icon + freshness badge */}
               <div className="flex items-start justify-between mb-3">
-                <div className="rounded-lg bg-gray-100 p-2.5 group-hover:bg-teal/10 transition-colors duration-200">
+                <div className="rounded-lg bg-[var(--bg-tertiary)] p-2.5 group-hover:bg-teal/10 transition-colors duration-200">
                   <FileText size={18} className="text-[var(--text-muted)] group-hover:text-teal transition-colors duration-200" />
                 </div>
                 <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${freshness.bg} ${freshness.text} ${freshness.ring}`}>
@@ -127,7 +127,7 @@ export default function DocSyncPage() {
                   <Hash size={12} />
                   <span>{doc.lines} lines</span>
                 </div>
-                <span className="font-mono text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-[var(--text-muted)]">
+                <span className="font-mono text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[var(--bg-tertiary)] text-[var(--text-muted)]">
                   {doc.standard}
                 </span>
               </div>

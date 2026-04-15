@@ -157,7 +157,7 @@ export default function TraceabilityPage() {
 
         {/* Orphans Panel */}
         <div className="w-72 shrink-0 space-y-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card p-4">
+          <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card p-4">
             <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-3 flex items-center gap-2">
               <GitBranch size={16} /> Stats
             </h3>
@@ -170,7 +170,7 @@ export default function TraceabilityPage() {
           </div>
 
           {totalOrphans > 0 && (
-            <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card p-4">
+            <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card p-4">
               <h3 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
                 <AlertTriangle size={16} /> Orphans ({totalOrphans})
               </h3>

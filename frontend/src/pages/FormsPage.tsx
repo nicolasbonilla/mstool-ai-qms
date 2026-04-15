@@ -186,7 +186,7 @@ export default function FormsPage() {
         </div>
 
         {showCreate && (
-          <div className="bg-white border border-[var(--card-border)] rounded-2xl shadow-lg shadow-gray-200/50 p-4 mb-4 max-h-72 overflow-y-auto">
+          <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-lg shadow-gray-200/50 p-4 mb-4 max-h-72 overflow-y-auto">
             <p className="text-[10px] text-[var(--text-muted)] mb-2 font-bold uppercase tracking-widest">Select Template</p>
             {templates.map((t) => (
               <button
@@ -244,7 +244,7 @@ export default function FormsPage() {
                     </button>
                   </div>
                 </div>
-                <p className="text-sm font-medium text-gray-800 mt-1 truncate">{form.title}</p>
+                <p className="text-sm font-medium text-[var(--text-primary)] mt-1 truncate">{form.title}</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">{form.created_by || 'Unknown'} &middot; {form.created_at ? new Date(form.created_at).toLocaleDateString() : ''}</p>
               </div>
             );
@@ -258,7 +258,7 @@ export default function FormsPage() {
       {/* Right Panel */}
       <div className="flex-1 overflow-y-auto">
         {selectedForm ? (
-          <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card">
+          <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card">
             <div className="p-6 border-b border-[var(--card-border)]">
               <div className="flex items-center justify-between">
                 <div>
@@ -367,7 +367,7 @@ export default function FormsPage() {
                       <div key={i} className="flex items-center gap-4 p-3.5 bg-gradient-to-r from-emerald-50 to-green-50/50 rounded-xl border border-emerald-100/80">
                         <CheckCircle2 size={18} className="text-green-600 shrink-0" />
                         <div>
-                          <p className="text-sm font-medium text-gray-800">{sig.user}</p>
+                          <p className="text-sm font-medium text-[var(--text-primary)]">{sig.user}</p>
                           <p className="text-xs text-[var(--text-muted)]">{sig.role} &middot; {new Date(sig.signed_at).toLocaleString()}</p>
                         </div>
                       </div>

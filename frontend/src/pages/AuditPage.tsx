@@ -76,7 +76,7 @@ export default function AuditPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
           {MODES.map((mode) => (
             <button key={mode.id} onClick={() => handleRun(mode.id)}
-              className="bg-white rounded-2xl border border-[var(--card-border)] p-6 text-left shadow-card hover:shadow-card-hover hover:border-teal/30 transition-all duration-200 group active:scale-[0.98]">
+              className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] p-6 text-left shadow-card hover:shadow-card-hover hover:border-teal/30 transition-all duration-200 group active:scale-[0.98]">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-teal/10"
                 style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.1), rgba(139,92,246,0.08))' }}>
                 <mode.icon size={22} className="text-teal" />
@@ -123,7 +123,7 @@ export default function AuditPage() {
               { label: 'Adequate', count: result.summary.adequate, bg: 'bg-amber-500/10', text: 'text-amber-600', icon: Clock, desc: 'Partial evidence' },
               { label: 'Weak/Missing', count: result.summary.weak + result.summary.missing, bg: 'bg-red-500/10', text: 'text-red-500', icon: XCircle, desc: 'Needs attention' },
             ].map(({ label, count, bg, text, icon: Icon, desc }) => (
-              <div key={label} className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-6">
+              <div key={label} className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-6">
                 <div className="flex items-center gap-2.5 mb-3">
                   <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}><Icon size={16} className={text} /></div>
                   <span className="text-[13px] font-bold text-[var(--text-secondary)]">{label}</span>
@@ -137,7 +137,7 @@ export default function AuditPage() {
           {groups && Object.entries(groups).map(([group, questions]) => (
             <div key={group} className="mb-6">
               <h3 className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3">{group}</h3>
-              <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card divide-y divide-gray-50">
+              <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card divide-y divide-gray-50">
                 {questions.map((q) => {
                   const style = SCORE_STYLES[q.score] || SCORE_STYLES.missing;
                   const Icon = style.icon;
@@ -147,7 +147,7 @@ export default function AuditPage() {
                       <button onClick={() => setExpandedClause(isOpen ? null : q.clause)}
                         className="w-full flex items-center gap-4 px-6 py-4 hover:bg-[var(--bg-tertiary)] transition text-left">
                         <span className="font-mono text-sm text-[var(--text-muted)] w-12 shrink-0">{q.clause}</span>
-                        <span className="flex-1 text-sm text-gray-800">{q.question}</span>
+                        <span className="flex-1 text-sm text-[var(--text-primary)]">{q.question}</span>
                         <span className={`text-xs px-3 py-1 rounded-full flex items-center gap-1 shrink-0 ${style.bg} ${style.text}`}>
                           <Icon size={12} /> {q.score.toUpperCase()}
                         </span>
@@ -161,7 +161,7 @@ export default function AuditPage() {
                             {q.evidence.length > 0 && (<>
                               <p className="text-xs font-medium text-[var(--text-muted)] mb-2">Evidence:</p>
                               {q.evidence.map((e, i) => (
-                                <div key={i} className="text-xs bg-white rounded-lg border border-[var(--border-default)] p-3 mb-2">
+                                <div key={i} className="text-xs bg-[var(--card-bg)] rounded-lg border border-[var(--border-default)] p-3 mb-2">
                                   <span className="text-[var(--text-muted)] uppercase mr-2">{e.type}</span>
                                   <span className="font-mono text-[var(--text-secondary)]">{e.reference}</span>
                                   <p className="text-[var(--text-secondary)] mt-1">{e.content}</p>
@@ -181,7 +181,7 @@ export default function AuditPage() {
           {result.gaps.length > 0 && (
             <div className="mb-8">
               <h3 className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3">Identified Gaps</h3>
-              <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card p-6 space-y-3">
+              <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card p-6 space-y-3">
                 {result.gaps.map((gap, i) => (
                   <div key={i} className={`p-4 rounded-xl border ${gap.severity === 'critical' ? 'bg-gradient-to-r from-red-50 to-orange-50/50 border-red-200/60' : 'bg-gradient-to-r from-amber-50 to-yellow-50/50 border-amber-200/60'}`}>
                     <span className={`text-xs font-bold uppercase ${gap.severity === 'critical' ? 'text-red-700' : 'text-yellow-700'}`}>{gap.severity}</span>
