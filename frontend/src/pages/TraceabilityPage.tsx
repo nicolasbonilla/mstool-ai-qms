@@ -139,12 +139,15 @@ export default function TraceabilityPage() {
           </div>
           <div>
             <span className="text-[16px] font-bold" style={{ color: 'var(--text-primary)' }}>
-              {data.stats.total_nodes} nodes · {data.stats.total_edges} edges
+              Requirement Traceability
             </span>
-            <p className="text-[12px] mt-0.5 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-              {totalOrphans > 0 ? <span className="text-amber-500 font-semibold">{totalOrphans} orphans found</span> : <span className="text-emerald-600 font-semibold">Full coverage</span>}
-              <span>· REQ → Architecture → Code → Tests → Risk Controls</span>
+            <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              IEC 62304 §5.2 requires every requirement to trace to code, tests, and risk controls.
             </p>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>{data.stats.total_nodes} artifacts · {data.stats.total_edges} links</span>
+              {totalOrphans > 0 ? <span className="text-[11px] font-semibold" style={{ color: '#F59E0B' }}>{totalOrphans} gaps found — action needed before audit</span> : <span className="text-[11px] font-semibold" style={{ color: '#10B981' }}>Full traceability coverage</span>}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -186,32 +189,59 @@ export default function TraceabilityPage() {
           </div>
 
           {totalOrphans > 0 && (
-            <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card p-4">
-              <h3 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
-                <AlertTriangle size={16} /> Orphans ({totalOrphans})
+            <div className="rounded-2xl p-4" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.06), rgba(245,158,11,0.02))', border: '1px solid rgba(245,158,11,0.12)' }}>
+              <h3 className="text-[11px] font-bold uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: '#F59E0B' }}>
+                <AlertTriangle size={13} /> Traceability Gaps ({totalOrphans})
               </h3>
+              <p className="text-[10px] mb-3" style={{ color: 'var(--text-muted)' }}>
+                These items will be flagged by an auditor. Each gap needs evidence.
+              </p>
+
               {data.orphans.requirements_without_tests.length > 0 && (
                 <div className="mb-3">
-                  <p className="text-xs font-medium text-red-600 mb-1">REQs without tests:</p>
-                  {data.orphans.requirements_without_tests.slice(0, 10).map(id => (
-                    <p key={id} className="text-xs text-[var(--text-secondary)] font-mono">{id}</p>
-                  ))}
+                  <p className="text-[10px] font-bold mb-1.5" style={{ color: '#EF4444' }}>
+                    REQs without test evidence ({data.orphans.requirements_without_tests.length})
+                  </p>
+                  <p className="text-[9px] mb-1.5" style={{ color: 'var(--text-muted)' }}>IEC 62304 §5.5 requires verification for each requirement</p>
+                  <div className="space-y-0.5">
+                    {data.orphans.requirements_without_tests.slice(0, 8).map(id => (
+                      <code key={id} className="block text-[10px] font-mono px-2 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.06)', color: 'var(--text-secondary)' }}>{id}</code>
+                    ))}
+                    {data.orphans.requirements_without_tests.length > 8 && (
+                      <p className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>+{data.orphans.requirements_without_tests.length - 8} more</p>
+                    )}
+                  </div>
                 </div>
               )}
+
               {data.orphans.risk_controls_without_verification.length > 0 && (
                 <div className="mb-3">
-                  <p className="text-xs font-medium text-red-600 mb-1">Risks without verification:</p>
-                  {data.orphans.risk_controls_without_verification.slice(0, 10).map(id => (
-                    <p key={id} className="text-xs text-[var(--text-secondary)] font-mono">{id}</p>
-                  ))}
+                  <p className="text-[10px] font-bold mb-1.5" style={{ color: '#EF4444' }}>
+                    Risks without verification ({data.orphans.risk_controls_without_verification.length})
+                  </p>
+                  <p className="text-[9px] mb-1.5" style={{ color: 'var(--text-muted)' }}>ISO 14971 §7.3 requires verification of each risk control</p>
+                  <div className="space-y-0.5">
+                    {data.orphans.risk_controls_without_verification.slice(0, 8).map(id => (
+                      <code key={id} className="block text-[10px] font-mono px-2 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.06)', color: 'var(--text-secondary)' }}>{id}</code>
+                    ))}
+                  </div>
                 </div>
               )}
+
               {data.orphans.code_without_requirements.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-yellow-600 mb-1">Code without REQs:</p>
-                  {data.orphans.code_without_requirements.slice(0, 10).map(id => (
-                    <p key={id} className="text-xs text-[var(--text-secondary)] font-mono">{id}</p>
-                  ))}
+                  <p className="text-[10px] font-bold mb-1.5" style={{ color: '#F59E0B' }}>
+                    Code without requirement trace ({data.orphans.code_without_requirements.length})
+                  </p>
+                  <p className="text-[9px] mb-1.5" style={{ color: 'var(--text-muted)' }}>IEC 62304 §5.2 requires each module to trace to a requirement</p>
+                  <div className="space-y-0.5">
+                    {data.orphans.code_without_requirements.slice(0, 8).map(id => (
+                      <code key={id} className="block text-[10px] font-mono px-2 py-0.5 rounded" style={{ background: 'rgba(245,158,11,0.06)', color: 'var(--text-secondary)' }}>{id}</code>
+                    ))}
+                    {data.orphans.code_without_requirements.length > 8 && (
+                      <p className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>+{data.orphans.code_without_requirements.length - 8} more</p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
