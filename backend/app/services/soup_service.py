@@ -28,7 +28,25 @@ SAFETY_CLASS_B = {
     "fastapi", "firebase-admin", "react", "react-dom", "uvicorn",
     "pydantic", "httpx", "axios", "zustand", "anthropic",
 }
-# Everything else is Class A
+
+# IEC 62304 §5.3.3 / §8.1.2 — enrichment data per known package
+SOUP_ENRICHMENT: Dict[str, Dict[str, str]] = {
+    "nibabel": {"manufacturer": "Open Source (nipy)", "purpose": "NIfTI/DICOM neuroimaging file I/O — reads brain MRI volumes for visualization and segmentation", "anomaly_url": "https://github.com/nipy/nibabel/issues"},
+    "numpy": {"manufacturer": "Open Source (NumPy)", "purpose": "N-dimensional array computation — used in volumetry calculations and image processing", "anomaly_url": "https://github.com/numpy/numpy/issues"},
+    "scipy": {"manufacturer": "Open Source (SciPy)", "purpose": "Scientific computing — connected component analysis, distance transforms, lesion detection", "anomaly_url": "https://github.com/scipy/scipy/issues"},
+    "pydicom": {"manufacturer": "Open Source (pydicom)", "purpose": "DICOM file parsing — reads medical imaging DICOM format from PACS systems", "anomaly_url": "https://github.com/pydicom/pydicom/issues"},
+    "scikit-image": {"manufacturer": "Open Source (scikit-image)", "purpose": "Image processing algorithms — morphological operations on segmentation masks", "anomaly_url": "https://github.com/scikit-image/scikit-image/issues"},
+    "fastapi": {"manufacturer": "Open Source (Sebastián Ramírez)", "purpose": "REST API framework — serves all backend endpoints for the medical application", "anomaly_url": "https://github.com/tiangolo/fastapi/issues"},
+    "firebase-admin": {"manufacturer": "Google LLC", "purpose": "Firebase Admin SDK — authentication, Firestore database, Cloud Storage access", "anomaly_url": "https://github.com/firebase/firebase-admin-python/issues"},
+    "react": {"manufacturer": "Meta Platforms Inc.", "purpose": "UI framework — renders the entire frontend single-page application", "anomaly_url": "https://github.com/facebook/react/issues"},
+    "pydantic": {"manufacturer": "Open Source (Samuel Colvin)", "purpose": "Data validation — validates all API request/response schemas", "anomaly_url": "https://github.com/pydantic/pydantic/issues"},
+    "anthropic": {"manufacturer": "Anthropic PBC", "purpose": "Claude API SDK — AI-powered clinical report generation and compliance chat", "anomaly_url": "https://github.com/anthropics/anthropic-sdk-python/issues"},
+    "uvicorn": {"manufacturer": "Open Source (Encode)", "purpose": "ASGI server — runs the FastAPI application in production (Cloud Run)", "anomaly_url": "https://github.com/encode/uvicorn/issues"},
+    "httpx": {"manufacturer": "Open Source (Encode)", "purpose": "HTTP client — calls GitHub API, NVD API, DICOMweb PACS endpoints", "anomaly_url": "https://github.com/encode/httpx/issues"},
+    "axios": {"manufacturer": "Open Source", "purpose": "HTTP client — frontend API calls with auth token injection", "anomaly_url": "https://github.com/axios/axios/issues"},
+    "zustand": {"manufacturer": "Open Source (Poimandres)", "purpose": "State management — auth state, segmentation state, AI store", "anomaly_url": "https://github.com/pmndrs/zustand/issues"},
+    "onnxruntime-web": {"manufacturer": "Microsoft Corporation", "purpose": "Browser ML inference — edge AI screening of brain MRI slices without server", "anomaly_url": "https://github.com/microsoft/onnxruntime/issues"},
+}
 
 
 class SOUPService:
@@ -52,6 +70,10 @@ class SOUPService:
                 if parsed:
                     parsed["source"] = "backend"
                     parsed["safety_class"] = self._classify_safety(parsed["name"])
+                    enrichment = SOUP_ENRICHMENT.get(parsed["name"], {})
+                    parsed["manufacturer"] = enrichment.get("manufacturer", "Open Source")
+                    parsed["purpose"] = enrichment.get("purpose", "")
+                    parsed["anomaly_url"] = enrichment.get("anomaly_url", "")
                     deps.append(parsed)
 
         # Frontend: package.json
@@ -61,6 +83,7 @@ class SOUPService:
                 pkg = json.loads(pkg_content)
                 for section in ["dependencies", "devDependencies"]:
                     for name, version in pkg.get(section, {}).items():
+                        enrichment = SOUP_ENRICHMENT.get(name, {})
                         deps.append({
                             "name": name,
                             "version": version.lstrip("^~>=<"),
@@ -69,6 +92,9 @@ class SOUPService:
                             "safety_class": self._classify_safety(name),
                             "license": None,
                             "pinned": not version.startswith("^") and not version.startswith("~"),
+                            "manufacturer": enrichment.get("manufacturer", "Open Source"),
+                            "purpose": enrichment.get("purpose", ""),
+                            "anomaly_url": enrichment.get("anomaly_url", ""),
                         })
             except json.JSONDecodeError:
                 pass

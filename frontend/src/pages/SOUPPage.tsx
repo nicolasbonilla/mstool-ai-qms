@@ -4,7 +4,7 @@ import { getDependencies, getSOUPSummary, scanVulnerabilities } from '../api/sou
 import PageSkeleton from '../components/ui/PageSkeleton';
 
 /* ─── Types ─── */
-interface Dependency { name: string; version: string; source: string; safety_class: string; license: string | null; pinned: boolean }
+interface Dependency { name: string; version: string; source: string; safety_class: string; license: string | null; pinned: boolean; manufacturer?: string; purpose?: string; anomaly_url?: string }
 interface Summary { total_dependencies: number; backend: number; frontend: number; by_safety_class: { A: number; B: number; C: number }; sbom_exists: boolean; review_records: number; review_coverage_pct: number }
 interface ScanResult { scanned_at: string; vulnerabilities: { cve_id: string; package: string; severity: string; cvss_score: number; description: string }[]; summary: { critical: number; high: number; medium: number; low: number } }
 
@@ -167,20 +167,36 @@ export default function SOUPPage() {
                 <div className="px-4 pb-4" style={{ borderTop: '1px solid var(--border-subtle)' }}>
                   <div className="pt-3 space-y-1">
                     {items.map((d, i) => (
-                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg transition-colors"
+                      <div key={i} className="p-3 rounded-lg transition-colors"
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-                        <Package size={13} style={{ color: 'var(--text-muted)' }} />
-                        <code className="text-[12px] font-mono font-semibold flex-1" style={{ color: 'var(--text-primary)' }}>{d.name}</code>
-                        <code className="text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>{d.version}</code>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md"
-                          style={{ background: d.source === 'backend' ? 'rgba(59,130,246,0.1)' : 'rgba(139,92,246,0.1)', color: d.source === 'backend' ? '#3B82F6' : '#8B5CF6' }}>
-                          {d.source}
-                        </span>
-                        {d.pinned ? (
-                          <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">pinned</span>
-                        ) : (
-                          <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">unpinned</span>
+                        <div className="flex items-center gap-3">
+                          <Package size={13} style={{ color: 'var(--text-muted)' }} />
+                          <code className="text-[12px] font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{d.name}</code>
+                          <code className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{d.version}</code>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-md"
+                            style={{ background: d.source === 'backend' ? 'rgba(59,130,246,0.1)' : 'rgba(139,92,246,0.1)', color: d.source === 'backend' ? '#3B82F6' : '#8B5CF6' }}>
+                            {d.source}
+                          </span>
+                          {d.pinned ? (
+                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">pinned</span>
+                          ) : (
+                            <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">unpinned</span>
+                          )}
+                        </div>
+                        {/* IEC 62304 §5.3.3 enrichment — manufacturer + purpose */}
+                        {(d.purpose || d.manufacturer) && (
+                          <div className="ml-7 mt-1 flex items-center gap-3">
+                            {d.manufacturer && <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>{d.manufacturer}</span>}
+                            {d.purpose && <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>— {d.purpose}</span>}
+                          </div>
+                        )}
+                        {d.anomaly_url && (
+                          <div className="ml-7 mt-0.5">
+                            <a href={d.anomaly_url} target="_blank" rel="noopener" className="text-[9px] font-semibold inline-flex items-center gap-1 hover:opacity-80" style={{ color: 'var(--accent-teal)' }}>
+                              Known anomalies →
+                            </a>
+                          </div>
                         )}
                       </div>
                     ))}
