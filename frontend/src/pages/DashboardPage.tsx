@@ -93,16 +93,19 @@ export default function DashboardPage() {
   const checksMap = Object.fromEntries(data.checks.map(c => [c.id, c]));
   const totalPass = data.checks.filter(c => c.status === 'pass').length;
   const totalChecks = data.checks.length;
-  const hasActions = data.checks.some(c => c.action);
   const ceScore = data.scores.ce_mark_overall;
-  const isReady = ceScore >= 90 && !hasActions;
+  const actionChecks = data.checks.filter(c => c.action);
+  const failedCI = ci.filter(r => r.conclusion === 'failure');
+  const isReady = ceScore >= 95 && actionChecks.length === 0 && failedCI.length === 0;
+  const hasUrgent = actionChecks.length > 0 || failedCI.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
       {/* ═══════════════════════════════════════════════
-          LEVEL 1 — STATUS BANNER
-          Answers: "Am I ready for audit? Yes/No"
+          SECTION 1 — STATUS BANNER
+          "Am I ready for the CE Mark audit?"
+          Includes: score, target context, repo link, timestamp
           ═══════════════════════════════════════════════ */}
       <div className="rounded-2xl p-5 flex items-center justify-between"
         style={{
@@ -117,11 +120,14 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <span className="text-[28px] font-extrabold tracking-tight" style={{ color: 'var(--text-primary)' }}>{ceScore}%</span>
               <span className="text-[14px] font-bold" style={{ color: isReady ? '#10B981' : '#F59E0B' }}>
-                {isReady ? 'CE Mark Ready' : 'Actions Needed'}
+                {isReady ? 'CE Mark Ready' : ceScore >= 95 ? 'Almost Ready' : 'Actions Needed'}
+              </span>
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
+                target: ≥95%
               </span>
             </div>
             <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              {totalPass}/{totalChecks} checks passing · {data.checks.filter(c => c.action).length} actions pending ·{' '}
+              {totalPass}/{totalChecks} checks · {actionChecks.length} action{actionChecks.length !== 1 ? 's' : ''} pending · {failedCI.length > 0 ? <span style={{ color: '#EF4444' }}>{failedCI.length} CI failure{failedCI.length > 1 ? 's' : ''}</span> : 'CI passing'} ·{' '}
               <a href={data.repo} target="_blank" rel="noopener" className="hover:underline inline-flex items-center gap-1" style={{ color: 'var(--accent-teal)' }}>
                 nicolasbonilla/medical-imaging-viewer <ExternalLink size={10} />
               </a>
@@ -140,7 +146,55 @@ export default function DashboardPage() {
       </div>
 
       {/* ═══════════════════════════════════════════════
-          LEVEL 2 — RESPONSIBILITY AREAS
+          SECTION 2 — URGENT ACTIONS
+          "What do I need to fix RIGHT NOW?"
+          Only shows if there are pending actions or CI failures
+          ═══════════════════════════════════════════════ */}
+      {hasUrgent && (
+        <div className="rounded-2xl p-4" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>
+            Requires Attention ({actionChecks.length + failedCI.length})
+          </p>
+          <div className="space-y-2">
+            {/* CI Failures first — most urgent */}
+            {failedCI.map(r => (
+              <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.06), rgba(239,68,68,0.02))', border: '1px solid rgba(239,68,68,0.1)' }}>
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" style={{ boxShadow: '0 0 6px rgba(239,68,68,0.4)' }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-semibold" style={{ color: '#EF4444' }}>CI Pipeline Failed</p>
+                  <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{r.name} · {r.head_sha}</p>
+                </div>
+                <a href={data.repo + '/actions'} target="_blank" rel="noopener" className="text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all hover:opacity-80"
+                  style={{ background: 'rgba(239,68,68,0.1)', color: '#DC2626' }}>
+                  View Logs <ArrowUpRight size={9} className="inline ml-0.5" />
+                </a>
+              </div>
+            ))}
+            {/* Compliance actions */}
+            {actionChecks.map(check => {
+              const Icon = ICONS[check.id] || Shield;
+              return (
+                <div key={check.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.06), rgba(245,158,11,0.02))', border: '1px solid rgba(245,158,11,0.1)' }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(245,158,11,0.1)' }}>
+                    <Icon size={14} style={{ color: '#F59E0B' }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-semibold" style={{ color: 'var(--text-primary)' }}>{check.title}: {Math.round(check.score * 10) / 10}%</p>
+                    <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{check.action}</p>
+                  </div>
+                  <button onClick={() => navigate('/forms')} className="text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all hover:opacity-80 shrink-0"
+                    style={{ background: 'rgba(245,158,11,0.1)', color: '#D97706' }}>
+                    Create Form →
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════
+          SECTION 3 — COMPLIANCE AREAS
           Answers: "Where are the problems?"
           Grouped by standard (IEC 62304, ISO 13485, IEC 81001-5-1)
           ═══════════════════════════════════════════════ */}
