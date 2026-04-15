@@ -119,6 +119,32 @@ class FirestoreService:
             results.append(data)
         return results
 
+    # ─── Score History ───
+
+    @staticmethod
+    def store_score_snapshot(scores: dict, breakdown: dict):
+        """Store a compliance score snapshot for trend tracking."""
+        db = FirestoreService._db()
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        doc_ref = db.collection(Collections.SCORE_HISTORY).document(today)
+        doc_ref.set({
+            "date": today,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "scores": scores,
+            "breakdown": breakdown,
+        })
+
+    @staticmethod
+    def get_score_history(days: int = 30) -> list:
+        """Get score snapshots for the last N days."""
+        db = FirestoreService._db()
+        query = db.collection(Collections.SCORE_HISTORY).order_by("date", direction="DESCENDING").limit(days)
+        results = []
+        for doc in query.stream():
+            data = doc.to_dict()
+            results.append(data)
+        return list(reversed(results))
+
     # ─── User Profiles ───
 
     @staticmethod

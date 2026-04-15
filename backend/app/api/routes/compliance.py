@@ -22,7 +22,14 @@ async def get_compliance_score(user: CurrentUser = Depends(get_current_user)):
     """Compute and return real-time compliance score with breakdown."""
     try:
         service = _get_service()
-        return service.compute_full_score()
+        result = service.compute_full_score()
+        # Store snapshot for trend tracking
+        try:
+            from app.services.firestore_service import FirestoreService
+            FirestoreService.store_score_snapshot(result["scores"], result["breakdown"])
+        except Exception:
+            pass  # Non-critical — don't fail score computation
+        return result
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
 
@@ -45,6 +52,13 @@ async def get_check_evidence(check_id: str, user: CurrentUser = Depends(get_curr
         return service.get_check_evidence(check_id)
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
+
+
+@router.get("/score-history")
+async def get_score_history(days: int = 30, user: CurrentUser = Depends(get_current_user)):
+    """Get compliance score trend data for sparklines."""
+    from app.services.firestore_service import FirestoreService
+    return {"history": FirestoreService.get_score_history(days)}
 
 
 @router.get("/auth-coverage")

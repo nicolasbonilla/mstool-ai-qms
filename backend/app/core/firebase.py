@@ -86,3 +86,4 @@ class Collections:
     AUDIT_RUNS = "qms_audit_runs"
     ALERTS = "qms_alerts"
     SETTINGS = "qms_settings"
+    SCORE_HISTORY = "qms_score_history"

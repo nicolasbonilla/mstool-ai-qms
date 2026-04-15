@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getDetailedScore, getCommits, getCIRuns, getCheckEvidence } from '../api/compliance';
+import { getDetailedScore, getCommits, getCIRuns, getCheckEvidence, getScoreHistory } from '../api/compliance';
 import {
   Activity, Shield, Lock, AlertTriangle, ExternalLink,
   GitCommit, CheckCircle2, XCircle, Clock, ChevronRight,
@@ -18,6 +18,26 @@ const ICONS: Record<string, React.ElementType> = {
   risk_verification: AlertTriangle, doc_completeness: FileText, doc_freshness: Clock,
   soup_vulnerability: Bug, codeowners_coverage: Users,
 };
+
+/* ─── Sparkline ─── */
+function Sparkline({ data, color, width = 80, height = 28 }: { data: number[]; color: string; width?: number; height?: number }) {
+  if (data.length < 2) return null;
+  const min = Math.min(...data), max = Math.max(...data);
+  const range = max - min || 1;
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((v - min) / range) * (height - 4) - 2;
+    return `${x},${y}`;
+  }).join(' ');
+  const areaPoints = `0,${height} ${points} ${width},${height}`;
+  return (
+    <svg width={width} height={height} className="overflow-visible">
+      <polyline points={areaPoints} fill={`${color}15`} stroke="none" />
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={parseFloat(points.split(' ').pop()!.split(',')[0])} cy={parseFloat(points.split(' ').pop()!.split(',')[1])} r="2.5" fill={color} />
+    </svg>
+  );
+}
 
 /* ─── Animated Counter ─── */
 function Counter({ to }: { to: number }) {
@@ -72,11 +92,20 @@ export default function DashboardPage() {
   const [open, setOpen] = useState<string | null>(null);
   const [deepEvidence, setDeepEvidence] = useState<Record<string, any>>({});
   const [evidenceLoading, setLoadingEvidence] = useState<string | null>(null);
+  const [history, setHistory] = useState<Record<string, number[]>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getDetailedScore(), getCommits(6), getCIRuns(5)])
-      .then(([s, c, r]) => { setData(s.data); setCommits(c.data.commits || []); setCi(r.data.ci_runs || []); })
+    Promise.all([getDetailedScore(), getCommits(6), getCIRuns(5), getScoreHistory(14)])
+      .then(([s, c, r, h]) => {
+        setData(s.data); setCommits(c.data.commits || []); setCi(r.data.ci_runs || []);
+        // Build sparkline data per score key
+        const hist = h.data.history || [];
+        const keys = ['ce_mark_overall', 'iec62304', 'iso13485', 'cybersecurity'];
+        const mapped: Record<string, number[]> = {};
+        keys.forEach(k => { mapped[k] = hist.map((entry: any) => entry.scores?.[k] || 0); });
+        setHistory(mapped);
+      })
       .catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -158,6 +187,9 @@ export default function DashboardPage() {
                 </div>
                 <p className="text-[13px] font-bold text-white/90 mt-3">{label}</p>
                 <p className="text-[10px] text-white/30 mt-0.5">{sub}</p>
+                {history[key]?.length >= 2 && (
+                  <div className="mt-3"><Sparkline data={history[key]} color={color} /></div>
+                )}
               </div>
             ))}
           </div>
