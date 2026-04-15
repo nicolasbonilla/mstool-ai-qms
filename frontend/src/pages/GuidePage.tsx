@@ -369,11 +369,14 @@ export default function GuidePage() {
         </div>
         <div>
           <span className="text-[18px] font-bold" style={{ color: 'var(--text-primary)' }}>QMS Operational Guide</span>
-          <p className="text-[13px] mt-0.5 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-            Step-by-step instructions for daily compliance work
-            <span>·</span>
-            <span className="font-mono text-[11px]">IEC 62304 · ISO 13485 · IEC 81001-5-1 · EU MDR</span>
+          <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            Step-by-step instructions for Developers, QA, QMS Managers, and Clinical Advisors
           </p>
+          <div className="flex items-center gap-2 mt-1">
+            {['IEC 62304', 'ISO 13485', 'IEC 81001-5-1', 'EU MDR'].map(s => (
+              <span key={s} className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>{s}</span>
+            ))}
+          </div>
         </div>
       </div>
 

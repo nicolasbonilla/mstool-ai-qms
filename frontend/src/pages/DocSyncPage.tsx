@@ -114,11 +114,14 @@ export default function DocSyncPage() {
                 </span>
               </div>
 
-              {/* Doc ID */}
-              <h3 className="font-semibold text-sm text-[var(--text-primary)] truncate">{doc.doc_id}</h3>
+              {/* Doc title */}
+              <h3 className="font-semibold text-[13px] truncate" style={{ color: 'var(--text-primary)' }}>{doc.title}</h3>
 
-              {/* Path */}
-              <p className="text-xs text-[var(--text-muted)] mt-1 truncate" title={doc.path}>{doc.path}</p>
+              {/* ID + path */}
+              <div className="flex items-center gap-2 mt-1">
+                <code className="text-[10px] font-mono font-bold" style={{ color: 'var(--accent-teal)' }}>{doc.doc_id}</code>
+                <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }} title={doc.path}>{doc.path}</p>
+              </div>
 
               {/* Footer: lines + standard */}
               <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--card-border)]">
