@@ -95,9 +95,11 @@ export default function DashboardPage() {
   const totalChecks = data.checks.length;
   const ceScore = data.scores.ce_mark_overall;
   const actionChecks = data.checks.filter(c => c.action);
-  const failedCI = ci.filter(r => r.conclusion === 'failure');
-  const isReady = ceScore >= 95 && actionChecks.length === 0 && failedCI.length === 0;
-  const hasUrgent = actionChecks.length > 0 || failedCI.length > 0;
+  // Only the LATEST CI run matters for urgency — historical failures are resolved
+  const latestCI = ci.length > 0 ? ci[0] : null;
+  const ciCurrentlyFailing = latestCI?.conclusion === 'failure';
+  const isReady = ceScore >= 95 && actionChecks.length === 0 && !ciCurrentlyFailing;
+  const hasUrgent = actionChecks.length > 0 || ciCurrentlyFailing;
 
   return (
     <div className="space-y-5">
@@ -127,7 +129,7 @@ export default function DashboardPage() {
               </span>
             </div>
             <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              {totalPass}/{totalChecks} checks · {actionChecks.length} action{actionChecks.length !== 1 ? 's' : ''} pending · {failedCI.length > 0 ? <span style={{ color: '#EF4444' }}>{failedCI.length} CI failure{failedCI.length > 1 ? 's' : ''}</span> : 'CI passing'} ·{' '}
+              {totalPass}/{totalChecks} checks · {actionChecks.length} action{actionChecks.length !== 1 ? 's' : ''} pending · {ciCurrentlyFailing ? <span style={{ color: '#EF4444' }}>CI failing</span> : <span style={{ color: '#10B981' }}>CI passing</span>} ·{' '}
               <a href={data.repo} target="_blank" rel="noopener" className="hover:underline inline-flex items-center gap-1" style={{ color: 'var(--accent-teal)' }}>
                 nicolasbonilla/medical-imaging-viewer <ExternalLink size={10} />
               </a>
@@ -153,23 +155,23 @@ export default function DashboardPage() {
       {hasUrgent && (
         <div className="rounded-2xl p-4" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
           <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>
-            Requires Attention ({actionChecks.length + failedCI.length})
+            Requires Attention ({actionChecks.length + (ciCurrentlyFailing ? 1 : 0)})
           </p>
           <div className="space-y-2">
-            {/* CI Failures first — most urgent */}
-            {failedCI.map(r => (
-              <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.06), rgba(239,68,68,0.02))', border: '1px solid rgba(239,68,68,0.1)' }}>
+            {/* CI failure — only if the LATEST run is failing (not historical) */}
+            {ciCurrentlyFailing && latestCI && (
+              <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.06), rgba(239,68,68,0.02))', border: '1px solid rgba(239,68,68,0.1)' }}>
                 <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" style={{ boxShadow: '0 0 6px rgba(239,68,68,0.4)' }} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold" style={{ color: '#EF4444' }}>CI Pipeline Failed</p>
-                  <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{r.name} · {r.head_sha}</p>
+                  <p className="text-[12px] font-semibold" style={{ color: '#EF4444' }}>CI Pipeline Failing</p>
+                  <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{latestCI.name} · {latestCI.head_sha} · Latest run failed</p>
                 </div>
                 <a href={data.repo + '/actions'} target="_blank" rel="noopener" className="text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all hover:opacity-80"
                   style={{ background: 'rgba(239,68,68,0.1)', color: '#DC2626' }}>
                   View Logs <ArrowUpRight size={9} className="inline ml-0.5" />
                 </a>
               </div>
-            ))}
+            )}
             {/* Compliance actions */}
             {actionChecks.map(check => {
               const Icon = ICONS[check.id] || Shield;
