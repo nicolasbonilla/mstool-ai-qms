@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getDetailedScore, getCommits, getCIRuns, getCheckEvidence } from '../api/compliance';
 import {
   Activity, Shield, Lock, AlertTriangle, ExternalLink,
@@ -70,6 +71,8 @@ export default function DashboardPage() {
       .catch(() => {}).finally(() => setLoading(false));
   }, []);
 
+  const navigate = useNavigate();
+
   const loadEvidence = async (checkId: string) => {
     if (expandedCheck === checkId) { setExpandedCheck(null); return; }
     setExpandedCheck(checkId);
@@ -131,8 +134,14 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
-        <div className="text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
-          {new Date(data.computed_at).toLocaleString()}
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate('/audit')} className="text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
+            style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+            Run Audit →
+          </button>
+          <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
+            {new Date(data.computed_at).toLocaleString()}
+          </span>
         </div>
       </div>
 
@@ -347,10 +356,15 @@ export default function DashboardPage() {
                             {check.action && (
                               <div className="flex gap-2.5 p-3 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50/50 border border-amber-200/60">
                                 <ArrowRight size={13} className="text-amber-500 shrink-0 mt-0.5" />
-                                <div>
+                                <div className="flex-1">
                                   <p className="text-[10px] font-bold text-amber-800">Action Required</p>
                                   <p className="text-[11px] text-amber-700 mt-0.5">{check.action}</p>
                                 </div>
+                                <button onClick={() => navigate('/forms')}
+                                  className="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all hover:opacity-80"
+                                  style={{ background: 'rgba(245,158,11,0.15)', color: '#D97706' }}>
+                                  Create Form →
+                                </button>
                               </div>
                             )}
                           </div>

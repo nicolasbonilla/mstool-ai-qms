@@ -18,14 +18,34 @@ import DocSyncPage from './pages/DocSyncPage';
 import GuidePage from './pages/GuidePage';
 import AIAssistant from './components/AIAssistant';
 
-const NAV = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/forms', label: 'Forms', icon: FileText },
-  { path: '/traceability', label: 'Traceability', icon: GitBranch },
-  { path: '/audit', label: 'Audit', icon: ShieldCheck },
-  { path: '/soup', label: 'SOUP', icon: Package },
-  { path: '/docsync', label: 'Doc Sync', icon: RefreshCw },
-  { path: '/guide', label: 'Guide', icon: BookOpen },
+const NAV_SECTIONS = [
+  {
+    label: 'Overview',
+    items: [
+      { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: 'Daily Work',
+    items: [
+      { path: '/forms', label: 'Forms', icon: FileText },
+      { path: '/audit', label: 'Audit', icon: ShieldCheck },
+    ],
+  },
+  {
+    label: 'Compliance',
+    items: [
+      { path: '/traceability', label: 'Traceability', icon: GitBranch },
+      { path: '/soup', label: 'SOUP', icon: Package },
+      { path: '/docsync', label: 'Doc Sync', icon: RefreshCw },
+    ],
+  },
+  {
+    label: 'Resources',
+    items: [
+      { path: '/guide', label: 'Guide', icon: BookOpen },
+    ],
+  },
 ];
 
 const ROLES: Record<string, string> = {
@@ -63,26 +83,33 @@ export default function App() {
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-          {NAV.map(({ path, label, icon: Icon }) => {
-            const active = location.pathname === path;
-            return (
-              <Link key={path} to={path}
-                className="flex items-center gap-3 h-9 px-3 mx-1 rounded-lg text-[13px] font-medium transition-all duration-150"
-                style={{
-                  background: active ? 'var(--sidebar-active)' : 'transparent',
-                  color: active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)',
-                }}
-                onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
-                onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)'; }}
-              >
-                <Icon size={16} strokeWidth={active ? 2.2 : 1.7} style={{ color: active ? 'var(--accent-teal)' : undefined }} />
-                <span className="flex-1">{label}</span>
-                {active && <ChevronRight size={13} style={{ color: 'rgba(14,165,233,0.5)' }} />}
-              </Link>
-            );
-          })}
+        {/* Navigation — grouped by workflow */}
+        <nav className="flex-1 py-2 px-2 overflow-y-auto">
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.label} className="mb-1">
+              <p className="text-[9px] font-bold uppercase tracking-[0.15em] px-4 pt-3 pb-1.5" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                {section.label}
+              </p>
+              {section.items.map(({ path, label, icon: Icon }) => {
+                const active = location.pathname === path;
+                return (
+                  <Link key={path} to={path}
+                    className="flex items-center gap-3 h-9 px-3 mx-1 rounded-lg text-[13px] font-medium transition-all duration-150"
+                    style={{
+                      background: active ? 'var(--sidebar-active)' : 'transparent',
+                      color: active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)',
+                    }}
+                    onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+                    onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)'; }}
+                  >
+                    <Icon size={16} strokeWidth={active ? 2.2 : 1.7} style={{ color: active ? 'var(--accent-teal)' : undefined }} />
+                    <span className="flex-1">{label}</span>
+                    {active && <ChevronRight size={13} style={{ color: 'rgba(14,165,233,0.5)' }} />}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Theme Toggle + IEC Badge */}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, GitCommit, FileText, Download, CheckCircle2,
   AlertTriangle, XCircle, Clock, ChevronDown, ChevronRight,
@@ -47,6 +48,8 @@ export default function AuditPage() {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [expandedClause, setExpandedClause] = useState<string | null>(null);
   const [error, setError] = useState('');
+
+  const navigate = useNavigate();
 
   const handleRun = async (mode: string) => {
     setLoading(true); setError('');
@@ -319,6 +322,11 @@ export default function AuditPage() {
                       </div>
                       <p className="text-[12px] mt-1" style={{ color: 'var(--text-secondary)' }}>{gap.recommendation}</p>
                     </div>
+                    <button onClick={() => navigate('/forms')}
+                      className="shrink-0 self-start text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all hover:opacity-80"
+                      style={{ background: `${gap.severity === 'critical' ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)'}`, color: gap.severity === 'critical' ? '#DC2626' : '#D97706' }}>
+                      Create Form →
+                    </button>
                   </div>
                 ))}
               </div>
