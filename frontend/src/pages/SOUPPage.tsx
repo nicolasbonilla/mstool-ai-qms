@@ -7,7 +7,7 @@ interface Dependency { name: string; version: string; source: string; safety_cla
 interface Summary { total_dependencies: number; backend: number; frontend: number; by_safety_class: { A: number; B: number; C: number }; sbom_exists: boolean; review_records: number; review_coverage_pct: number; }
 interface ScanResult { scanned_at: string; vulnerabilities: { cve_id: string; package: string; severity: string; cvss_score: number; description: string }[]; summary: { critical: number; high: number; medium: number; low: number }; }
 
-const CLASS_COLORS: Record<string, string> = { A: 'bg-green-100 text-green-700', B: 'bg-yellow-100 text-yellow-700', C: 'bg-red-100 text-red-700' };
+const CLASS_COLORS: Record<string, string> = { A: 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-200/50', B: 'bg-amber-500/10 text-amber-600 ring-1 ring-amber-200/50', C: 'bg-red-500/10 text-red-500 ring-1 ring-red-200/50' };
 const SEV_COLORS: Record<string, string> = { CRITICAL: 'bg-red-700 text-white', HIGH: 'bg-red-500 text-white', MEDIUM: 'bg-orange-400 text-white', LOW: 'bg-yellow-400 text-[var(--text-primary)]' };
 const PIE_COLORS = ['#10B981', '#F59E0B', '#EF4444'];
 
@@ -162,7 +162,7 @@ export default function SOUPPage() {
                 <tr key={i} className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-tertiary)]">
                   <td className="px-4 py-3 font-medium">{d.name}</td>
                   <td className="px-4 py-3 font-mono text-xs">{d.version}</td>
-                  <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${d.source === 'backend' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{d.source}</span></td>
+                  <td className="px-4 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${d.source === 'backend' ? 'bg-blue-500/10 text-blue-600 ring-1 ring-blue-200/50' : 'bg-purple-500/10 text-purple-600 ring-1 ring-purple-200/50'}`}>{d.source}</span></td>
                   <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${CLASS_COLORS[d.safety_class] || ''}`}>Class {d.safety_class}</span></td>
                   <td className="px-4 py-3">{d.pinned ? <span className="text-green-600 text-xs">Pinned</span> : <span className="text-yellow-600 text-xs">Unpinned</span>}</td>
                 </tr>

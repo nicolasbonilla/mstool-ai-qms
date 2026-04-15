@@ -11,11 +11,11 @@ interface AuditResult {
   summary: { total_checks: number; strong: number; adequate: number; weak: number; missing: number };
 }
 
-const SCORE_STYLES: Record<string, { bg: string; text: string; icon: React.ElementType }> = {
-  strong: { bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle2 },
-  adequate: { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: Clock },
-  weak: { bg: 'bg-orange-100', text: 'text-orange-700', icon: AlertTriangle },
-  missing: { bg: 'bg-red-100', text: 'text-red-700', icon: XCircle },
+const SCORE_STYLES: Record<string, { bg: string; text: string; icon: React.ElementType; ring: string }> = {
+  strong: { bg: 'bg-emerald-500/10', text: 'text-emerald-600', icon: CheckCircle2, ring: 'ring-1 ring-emerald-200/50' },
+  adequate: { bg: 'bg-amber-500/10', text: 'text-amber-600', icon: Clock, ring: 'ring-1 ring-amber-200/50' },
+  weak: { bg: 'bg-orange-500/10', text: 'text-orange-600', icon: AlertTriangle, ring: 'ring-1 ring-orange-200/50' },
+  missing: { bg: 'bg-red-500/10', text: 'text-red-500', icon: XCircle, ring: 'ring-1 ring-red-200/50' },
 };
 
 const MODES = [
@@ -148,26 +148,42 @@ export default function AuditPage() {
                         className="w-full flex items-center gap-4 px-6 py-4 hover:bg-[var(--bg-tertiary)] transition text-left">
                         <span className="font-mono text-sm text-[var(--text-muted)] w-12 shrink-0">{q.clause}</span>
                         <span className="flex-1 text-sm text-[var(--text-primary)]">{q.question}</span>
-                        <span className={`text-xs px-3 py-1 rounded-full flex items-center gap-1 shrink-0 ${style.bg} ${style.text}`}>
-                          <Icon size={12} /> {q.score.toUpperCase()}
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md flex items-center gap-1 shrink-0 ${style.bg} ${style.text} ${style.ring}`}>
+                          <Icon size={11} /> {q.score}
                         </span>
                         <ChevronDown size={16} className={`text-[var(--text-muted)] transition ${isOpen ? 'rotate-180' : ''}`} />
                       </button>
                       {isOpen && (
-                        <div className="px-6 pb-4 bg-gradient-to-b from-gray-50/80 to-white">
-                          <div className="ml-12">
-                            <p className="text-xs font-medium text-[var(--text-muted)] mb-2">Checks:</p>
-                            <ul className="text-xs text-[var(--text-secondary)] space-y-1 mb-3">{q.checks.map((c, i) => <li key={i}>- {c}</li>)}</ul>
-                            {q.evidence.length > 0 && (<>
-                              <p className="text-xs font-medium text-[var(--text-muted)] mb-2">Evidence:</p>
-                              {q.evidence.map((e, i) => (
-                                <div key={i} className="text-xs bg-[var(--card-bg)] rounded-lg border border-[var(--border-default)] p-3 mb-2">
-                                  <span className="text-[var(--text-muted)] uppercase mr-2">{e.type}</span>
-                                  <span className="font-mono text-[var(--text-secondary)]">{e.reference}</span>
-                                  <p className="text-[var(--text-secondary)] mt-1">{e.content}</p>
+                        <div className="px-6 pb-4" style={{ background: 'var(--bg-tertiary)' }}>
+                          <div className="ml-12 pt-3">
+                            {/* Checks performed */}
+                            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Checks Performed</p>
+                            <div className="space-y-1 mb-4">
+                              {q.checks.map((c, i) => (
+                                <div key={i} className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--text-secondary)' }}>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-teal/50 shrink-0" />
+                                  {c}
                                 </div>
                               ))}
-                            </>)}
+                            </div>
+
+                            {/* Evidence found */}
+                            {q.evidence.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Evidence Found</p>
+                                <div className="space-y-2">
+                                  {q.evidence.map((e, i) => (
+                                    <div key={i} className="rounded-xl border p-3" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>{e.type}</span>
+                                        <code className="text-[11px] font-mono font-medium" style={{ color: 'var(--accent-teal)' }}>{e.reference}</code>
+                                      </div>
+                                      <p className="text-[12px] mt-1" style={{ color: 'var(--text-secondary)' }}>{e.content}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
