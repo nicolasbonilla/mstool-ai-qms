@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { getDetailedScore, getCommits, getCIRuns, getCheckEvidence } from '../api/compliance';
-// CodeBlock will be used when deep evidence panel is wired
-// import CodeBlock from '../components/ui/CodeBlock';
 import {
   Activity, Shield, Lock, AlertTriangle, ExternalLink,
   GitCommit, CheckCircle2, XCircle, Clock, ChevronRight,
@@ -230,37 +228,124 @@ export default function DashboardPage() {
                       </div>
                     )}
 
-                    {/* Evidence */}
-                    <div className="mt-3 rounded-xl border border-[var(--card-border)] overflow-hidden">
-                      <div className="bg-gradient-to-r from-gray-50 to-gray-50/50 px-4 py-2.5 flex items-center gap-2 border-b border-[var(--card-border)]">
-                        <FileText size={12} className="text-[var(--text-muted)]" />
-                        <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Evidence Trail</span>
-                        {evidenceLoading === check.id && <div className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin ml-2" style={{ borderColor: 'var(--accent-teal)', borderTopColor: 'transparent' }} />}
+                    {/* Evidence — deep or basic */}
+                    {evidenceLoading === check.id && (
+                      <div className="mt-3 flex items-center gap-2 text-[12px]" style={{ color: 'var(--text-muted)' }}>
+                        <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent-teal)', borderTopColor: 'transparent' }} />
+                        Loading evidence with source code...
                       </div>
-                      {check.evidence.map((ev, i) => (
-                        <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--bg-tertiary)]/50 transition-colors group/row">
-                          <div className="flex-1 min-w-0">
-                            <code className="text-[11px] text-[var(--text-secondary)] font-mono font-medium">{ev.file}</code>
-                            <p className="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">{ev.detail}</p>
-                          </div>
-                          <div className="shrink-0 flex items-center gap-3">
-                            {ev.status === 'protected' ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg ring-1 ring-emerald-200/50">
-                                <CheckCircle2 size={11} /> PASS
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-50 px-2.5 py-1 rounded-lg ring-1 ring-red-200/50">
-                                <XCircle size={11} /> FAIL
-                              </span>
+                    )}
+
+                    {deepEvidence[check.id]?.evidence ? (
+                      <div className="mt-3 space-y-2">
+                        {deepEvidence[check.id].evidence.map((ev: any, i: number) => (
+                          <div key={i} className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--card-border)' }}>
+                            {/* File header */}
+                            <div className="flex items-center justify-between px-4 py-2.5" style={{ background: 'var(--bg-tertiary)' }}>
+                              <div className="flex items-center gap-2">
+                                <code className="text-[11px] font-mono font-semibold" style={{ color: 'var(--text-secondary)' }}>{ev.file || ev.module || ev.standard}</code>
+                                {ev.status === 'pass' && <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md ring-1 ring-emerald-200/50 inline-flex items-center gap-1"><CheckCircle2 size={9} /> PASS</span>}
+                                {ev.status === 'fail' && <span className="text-[9px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-md ring-1 ring-red-200/50 inline-flex items-center gap-1"><XCircle size={9} /> FAIL</span>}
+                                {ev.total_endpoints !== undefined && <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{ev.protected_endpoints}/{ev.total_endpoints} protected</span>}
+                                {ev.expected !== undefined && <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{ev.found}/{ev.expected} docs</span>}
+                              </div>
+                              {(ev.github_url || ev.url) && (
+                                <a href={ev.github_url || ev.url} target="_blank" rel="noopener" className="text-[10px] font-semibold inline-flex items-center gap-1" style={{ color: 'var(--accent-teal)' }}>
+                                  View on GitHub <ArrowUpRight size={9} />
+                                </a>
+                              )}
+                            </div>
+
+                            {/* Code snippets */}
+                            {(ev.auth_lines?.length > 0 || ev.validation_lines?.length > 0) && (
+                              <div className="px-3 py-2 space-y-1" style={{ background: 'var(--code-bg)' }}>
+                                {(ev.auth_lines || ev.validation_lines || []).slice(0, 3).map((line: any, j: number) => (
+                                  <a key={j} href={line.url} target="_blank" rel="noopener" className="flex items-start gap-3 px-2 py-1 rounded hover:opacity-80 transition-opacity">
+                                    <span className="text-[10px] font-mono shrink-0 w-8 text-right" style={{ color: 'var(--code-line-number)' }}>L{line.line}</span>
+                                    <code className="text-[11px] font-mono flex-1 truncate" style={{ color: 'var(--code-text)' }}>{line.text}</code>
+                                    <ArrowUpRight size={9} className="shrink-0 mt-1" style={{ color: 'var(--accent-teal)' }} />
+                                  </a>
+                                ))}
+                              </div>
                             )}
-                            <a href={ev.github_url} target="_blank" rel="noopener"
-                              className="inline-flex items-center gap-1 text-[11px] text-teal hover:text-teal-dark font-semibold opacity-60 group-hover/row:opacity-100 transition-opacity">
-                              GitHub <ArrowUpRight size={10} />
-                            </a>
+
+                            {/* Test functions */}
+                            {ev.test_functions?.length > 0 && (
+                              <div className="px-3 py-2 space-y-1" style={{ background: 'var(--code-bg)' }}>
+                                {ev.test_functions.map((tf: any, j: number) => (
+                                  <a key={j} href={tf.url} target="_blank" rel="noopener" className="flex items-center gap-3 px-2 py-1 rounded hover:opacity-80 transition-opacity">
+                                    <span className="text-[10px] font-mono shrink-0 w-8 text-right" style={{ color: 'var(--code-line-number)' }}>L{tf.line}</span>
+                                    <code className="text-[11px] font-mono flex-1" style={{ color: 'var(--code-text)' }}>{tf.name}</code>
+                                    <ArrowUpRight size={9} className="shrink-0" style={{ color: 'var(--accent-teal)' }} />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Verified/Partial risk lines */}
+                            {(ev.verified_lines?.length > 0 || ev.partial_lines?.length > 0) && (
+                              <div className="px-3 py-2 space-y-1">
+                                {ev.verified_lines?.slice(0, 5).map((line: any, j: number) => (
+                                  <a key={`v${j}`} href={line.url} target="_blank" rel="noopener" className="flex items-center gap-2 px-2 py-1 rounded text-[11px] font-mono hover:opacity-80" style={{ background: 'var(--status-pass-bg)', color: 'var(--status-pass-text)' }}>
+                                    <CheckCircle2 size={10} /> <span className="w-8 text-right shrink-0">L{line.line}</span> {line.text}
+                                  </a>
+                                ))}
+                                {ev.partial_lines?.slice(0, 5).map((line: any, j: number) => (
+                                  <a key={`p${j}`} href={line.url} target="_blank" rel="noopener" className="flex items-center gap-2 px-2 py-1 rounded text-[11px] font-mono hover:opacity-80" style={{ background: 'var(--status-warn-bg)', color: 'var(--status-warn-text)' }}>
+                                    <Clock size={10} /> <span className="w-8 text-right shrink-0">L{line.line}</span> {line.text}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Document list */}
+                            {ev.documents?.length > 0 && (
+                              <div className="px-3 py-2 space-y-1" style={{ background: 'var(--code-bg)' }}>
+                                {ev.documents.map((doc: any, j: number) => (
+                                  <a key={j} href={doc.url} target="_blank" rel="noopener" className="flex items-center gap-2 px-2 py-1 rounded text-[11px] font-mono hover:opacity-80" style={{ color: 'var(--code-text)' }}>
+                                    <FileText size={10} style={{ color: 'var(--text-muted)' }} /> {doc.name} <ArrowUpRight size={9} className="ml-auto" style={{ color: 'var(--accent-teal)' }} />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* CODEOWNERS line */}
+                            {ev.codeowners_line && (
+                              <div className="px-3 py-2" style={{ background: 'var(--code-bg)' }}>
+                                <a href={ev.codeowners_line.url} target="_blank" rel="noopener" className="flex items-center gap-3 px-2 py-1 rounded hover:opacity-80">
+                                  <span className="text-[10px] font-mono shrink-0 w-8 text-right" style={{ color: 'var(--code-line-number)' }}>L{ev.codeowners_line.number}</span>
+                                  <code className="text-[11px] font-mono flex-1" style={{ color: ev.status === 'pass' ? 'var(--status-pass-text)' : 'var(--status-fail-text)' }}>{ev.codeowners_line.text}</code>
+                                  <ArrowUpRight size={9} style={{ color: 'var(--accent-teal)' }} />
+                                </a>
+                              </div>
+                            )}
                           </div>
+                        ))}
+                      </div>
+                    ) : !evidenceLoading && (
+                      <div className="mt-3 rounded-xl border overflow-hidden" style={{ borderColor: 'var(--card-border)' }}>
+                        <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--card-border)' }}>
+                          <FileText size={12} style={{ color: 'var(--text-muted)' }} />
+                          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Evidence Trail</span>
                         </div>
-                      ))}
-                    </div>
+                        {check.evidence.map((ev, i) => (
+                          <div key={i} className="flex items-center gap-3 px-4 py-3 transition-colors" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <div className="flex-1 min-w-0">
+                              <code className="text-[11px] font-mono font-medium" style={{ color: 'var(--text-secondary)' }}>{ev.file}</code>
+                              <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{ev.detail}</p>
+                            </div>
+                            <div className="shrink-0 flex items-center gap-3">
+                              {ev.status === 'protected' ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg ring-1 ring-emerald-200/50"><CheckCircle2 size={11} /> PASS</span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-50 px-2.5 py-1 rounded-lg ring-1 ring-red-200/50"><XCircle size={11} /> FAIL</span>
+                              )}
+                              <a href={ev.github_url} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[11px] font-semibold" style={{ color: 'var(--accent-teal)' }}>GitHub <ArrowUpRight size={10} /></a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {check.action && (
                       <div className="flex gap-3 p-4 mt-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50/50 border border-amber-200/60">
