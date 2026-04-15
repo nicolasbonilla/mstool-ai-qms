@@ -46,33 +46,31 @@ export default function DocSyncPage() {
   };
 
   return (
-    <div className="animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">Document Sync</h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">Monitor document freshness and drift</p>
+    <div className="space-y-6">
+      {/* ═══ LEVEL 1 — STATUS BANNER ═══ */}
+      <div className="rounded-2xl p-5 flex items-center justify-between"
+        style={{
+          background: freshCounts.red > 0 ? 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(239,68,68,0.03))' : 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))',
+          border: `1px solid ${freshCounts.red > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}`,
+        }}>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: freshCounts.red > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)' }}>
+            <RefreshCw size={24} style={{ color: freshCounts.red > 0 ? '#EF4444' : '#10B981' }} />
+          </div>
+          <div>
+            <span className="text-[18px] font-bold" style={{ color: 'var(--text-primary)' }}>{docs.length} Regulatory Documents</span>
+            <p className="text-[13px] mt-0.5 flex items-center gap-3" style={{ color: 'var(--text-muted)' }}>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" />{freshCounts.green} fresh</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />{freshCounts.yellow} review needed</span>
+              {freshCounts.red > 0 && <span className="flex items-center gap-1 text-red-500 font-semibold"><span className="w-2 h-2 rounded-full bg-red-500" />{freshCounts.red} outdated</span>}
+              <span>· ISO 13485 Clause 4.2.4</span>
+            </p>
+          </div>
         </div>
-        <button className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal to-teal-light text-white rounded-xl shadow-glow-sm hover:shadow-glow transition-all duration-200 font-medium text-sm">
-          <RefreshCw size={16} /> Check Drift
-        </button>
       </div>
 
-      {/* Summary Badges */}
-      <div className="flex gap-3 mb-6">
-        {Object.entries(freshCounts).map(([key, count]) => {
-          const cfg = FRESHNESS_CONFIG[key];
-          return (
-            <div key={key} className={`flex items-center gap-2 px-3.5 py-2 rounded-xl ${cfg.bg} ${cfg.ring}`}>
-              <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-              <span className={`text-xs font-semibold ${cfg.text}`}>{count} {cfg.label}</span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-2 mb-6">
+      {/* ═══ LEVEL 2 — FILTERS + DOCUMENT GRID ═══ */}
+      <div className="flex items-center gap-2">
         <Filter size={14} className="text-[var(--text-muted)]" />
         <button
           onClick={() => setFilter('')}

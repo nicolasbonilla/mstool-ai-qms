@@ -361,14 +361,20 @@ export default function GuidePage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">QMS Operational Guide</h1>
-        <p className="text-sm text-[var(--text-muted)] mt-1">
-          Step-by-step instructions for daily use of MSTool-AI-QMS
-        </p>
-        <p className="text-xs text-[var(--text-muted)] mt-1">
-          IEC 62304:2006+A1:2015 | ISO 13485:2016 | IEC 81001-5-1:2021 | EU MDR 2017/745
-        </p>
+      {/* ═══ LEVEL 1 — STATUS BANNER ═══ */}
+      <div className="rounded-2xl p-5 mb-6 flex items-center gap-4"
+        style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.08), rgba(139,92,246,0.04))', border: '1px solid rgba(14,165,233,0.12)' }}>
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.15), rgba(139,92,246,0.1))' }}>
+          <BookOpen size={24} style={{ color: '#0EA5E9' }} />
+        </div>
+        <div>
+          <span className="text-[18px] font-bold" style={{ color: 'var(--text-primary)' }}>QMS Operational Guide</span>
+          <p className="text-[13px] mt-0.5 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+            Step-by-step instructions for daily compliance work
+            <span>·</span>
+            <span className="font-mono text-[11px]">IEC 62304 · ISO 13485 · IEC 81001-5-1 · EU MDR</span>
+          </p>
+        </div>
       </div>
 
       <div className="space-y-3">

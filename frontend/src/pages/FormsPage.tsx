@@ -170,20 +170,44 @@ export default function FormsPage() {
     </div>
   );
 
+  const draftCount = forms.filter(f => f.status === 'draft').length;
+  const reviewCount = forms.filter(f => f.status === 'in_review').length;
+  const approvedCount = forms.filter(f => f.status === 'approved').length;
+
   return (
-    <div className="flex gap-6 h-[calc(100vh-6rem)]">
+    <div className="space-y-4">
+      {/* ═══ LEVEL 1 — STATUS BANNER ═══ */}
+      <div className="rounded-2xl p-5 flex items-center justify-between"
+        style={{
+          background: draftCount > 0 ? 'linear-gradient(135deg, rgba(14,165,233,0.08), rgba(14,165,233,0.03))' : 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))',
+          border: `1px solid ${draftCount > 0 ? 'rgba(14,165,233,0.15)' : 'rgba(16,185,129,0.15)'}`,
+        }}>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(14,165,233,0.12)' }}>
+            <FileText size={24} style={{ color: '#0EA5E9' }} />
+          </div>
+          <div>
+            <span className="text-[18px] font-bold" style={{ color: 'var(--text-primary)' }}>Regulatory Forms</span>
+            <p className="text-[13px] mt-0.5 flex items-center gap-3" style={{ color: 'var(--text-muted)' }}>
+              <span>{forms.length} total</span>
+              {draftCount > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400" />{draftCount} draft</span>}
+              {reviewCount > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />{reviewCount} in review</span>}
+              {approvedCount > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" />{approvedCount} approved</span>}
+              <span>· 11 templates (TPL-01 to TPL-11)</span>
+            </p>
+          </div>
+        </div>
+        <button onClick={() => setShowCreate(!showCreate)}
+          className="flex items-center gap-1.5 text-[13px] font-semibold text-white px-4 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.98]"
+          style={{ background: 'linear-gradient(135deg, #0EA5E9, #0284C7)' }}>
+          <Plus size={15} /> New Form
+        </button>
+      </div>
+
+      {/* ═══ LEVEL 2 — FORM LIST + EDITOR ═══ */}
+      <div className="flex gap-5 h-[calc(100vh-12rem)]">
       {/* Left Panel */}
       <div className="w-96 flex flex-col shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-extrabold tracking-tight text-[var(--text-primary)]">Forms</h1>
-          <button
-            onClick={() => setShowCreate(!showCreate)}
-            className="flex items-center gap-1.5 text-[13px] font-semibold text-white px-4 py-2 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-teal/20 active:scale-[0.98]"
-            style={{ background: 'linear-gradient(135deg, #0EA5E9, #0284C7)' }}
-          >
-            <Plus size={15} /> New Form
-          </button>
-        </div>
 
         {showCreate && (
           <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl shadow-lg shadow-gray-200/50 p-4 mb-4 max-h-72 overflow-y-auto">
@@ -387,6 +411,7 @@ export default function FormsPage() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }

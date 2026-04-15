@@ -125,19 +125,34 @@ export default function TraceabilityPage() {
   const totalOrphans = data.orphans.requirements_without_tests.length + data.orphans.risk_controls_without_verification.length + data.orphans.code_without_requirements.length;
 
   return (
-    <div className="h-[calc(100vh-6rem)]">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Traceability Explorer</h1>
-          <p className="text-sm text-[var(--text-muted)]">REQ → Architecture → Code → Tests → Risk Controls</p>
+    <div className="space-y-4" style={{ height: 'calc(100vh - 6rem)' }}>
+      {/* ═══ LEVEL 1 — STATUS BANNER ═══ */}
+      <div className="rounded-2xl p-4 flex items-center justify-between"
+        style={{
+          background: totalOrphans > 0 ? 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03))' : 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))',
+          border: `1px solid ${totalOrphans > 0 ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)'}`,
+        }}>
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: totalOrphans > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)' }}>
+            <GitBranch size={20} style={{ color: totalOrphans > 0 ? '#F59E0B' : '#10B981' }} />
+          </div>
+          <div>
+            <span className="text-[16px] font-bold" style={{ color: 'var(--text-primary)' }}>
+              {data.stats.total_nodes} nodes · {data.stats.total_edges} edges
+            </span>
+            <p className="text-[12px] mt-0.5 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+              {totalOrphans > 0 ? <span className="text-amber-500 font-semibold">{totalOrphans} orphans found</span> : <span className="text-emerald-600 font-semibold">Full coverage</span>}
+              <span>· REQ → Architecture → Code → Tests → Risk Controls</span>
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-4 text-xs">
+        <div className="flex items-center gap-3">
           {Object.entries(TYPE_COLORS).map(([type, color]) => {
             const count = data.nodes.filter(n => n.type === type).length;
             return (
-              <span key={type} className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full" style={{ background: color }} />
-                {TYPE_LABELS[type]} ({count})
+              <span key={type} className="flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: 'var(--text-muted)' }}>
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
+                {TYPE_LABELS[type]} {count}
               </span>
             );
           })}
