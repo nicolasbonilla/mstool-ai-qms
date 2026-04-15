@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getDocuments } from '../api/compliance';
-import { RefreshCw, FileText, Filter, Hash } from 'lucide-react';
+import { RefreshCw, FileText, Filter, Hash, Search } from 'lucide-react';
+import EmptyState from '../components/ui/EmptyState';
 
 interface Doc { path: string; doc_id: string; title: string; standard: string; last_modified: string; lines: number; freshness: string; }
 
@@ -136,10 +137,12 @@ export default function DocSyncPage() {
 
       {/* Empty state */}
       {filtered.length === 0 && docs.length > 0 && (
-        <div className="text-center py-16 text-[var(--text-muted)]">
-          <FileText size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm">No documents match this filter</p>
-        </div>
+        <EmptyState
+          icon={<Search size={28} style={{ color: 'var(--text-muted)' }} />}
+          title="No documents match this filter"
+          description="Try selecting a different standard or clearing the filter to see all documents."
+          action={{ label: 'Show All', onClick: () => setFilter('') }}
+        />
       )}
     </div>
   );

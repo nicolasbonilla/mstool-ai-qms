@@ -4,6 +4,7 @@ import {
   Trash2, Search, Edit, Clock, CheckCircle, Save,
 } from 'lucide-react';
 import apiClient from '../api/client';
+import EmptyState from '../components/ui/EmptyState';
 
 interface FormTemplate {
   template_id: string;
@@ -274,7 +275,12 @@ export default function FormsPage() {
             );
           })}
           {filteredForms.length === 0 && (
-            <p className="text-sm text-[var(--text-muted)] text-center py-8">No forms found</p>
+            <EmptyState
+              icon={<FileText size={28} style={{ color: '#0EA5E9' }} />}
+              title="No forms yet"
+              description="Create your first regulatory form to start tracking compliance evidence. Choose from 11 IEC 62304 templates."
+              action={{ label: '+ New Form', onClick: () => setShowCreate(true) }}
+            />
           )}
         </div>
       </div>
@@ -402,13 +408,12 @@ export default function FormsPage() {
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <FileText size={48} className="text-[var(--text-muted)] mx-auto mb-4" />
-              <p className="text-[var(--text-muted)]">Select a form or create a new one</p>
-              <p className="text-xs text-[var(--text-muted)] mt-2">TPL-01 to TPL-11 | IEC 62304 + ISO 13485</p>
-            </div>
-          </div>
+          <EmptyState
+            icon={<FileText size={28} style={{ color: '#0EA5E9' }} />}
+            title="Select a form"
+            description="Choose a form from the list to view and edit its contents, or create a new one from the 11 available IEC 62304 templates."
+            action={{ label: '+ New Form', onClick: () => setShowCreate(true) }}
+          />
         )}
       </div>
     </div>
