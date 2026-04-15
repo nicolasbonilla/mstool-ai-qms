@@ -1,5 +1,7 @@
 import apiClient from './client';
 
+export const getAuditPlan = () => apiClient.get('/audit/plan');
+
 export const runAudit = (mode: string, target?: string) =>
   apiClient.post('/audit/run', { mode, target });
 

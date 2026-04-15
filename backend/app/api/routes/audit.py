@@ -14,6 +14,27 @@ from app.services.firestore_service import FirestoreService
 router = APIRouter(prefix="/audit", tags=["Audit Simulator"])
 
 
+@router.get("/plan")
+async def get_audit_plan(user: CurrentUser = Depends(get_current_user)):
+    """Get the audit plan — all 20 IEC 62304 clauses that will be checked, with descriptions."""
+    from app.services.audit_engine import CLAUSES
+    return {
+        "total_clauses": len(CLAUSES),
+        "groups": {},
+        "clauses": [{
+            "clause": c["clause"],
+            "title": c["title"],
+            "group": c["group"],
+            "description": c.get("description", ""),
+            "what_auditor_looks_for": c.get("what_auditor_looks_for", ""),
+            "where_we_check": c.get("where_we_check", ""),
+            "class_c_note": c.get("class_c_note", ""),
+            "form_if_fails": c.get("form_if_fails", ""),
+            "checks": c["checks"],
+        } for c in CLAUSES],
+    }
+
+
 @router.post("/run")
 async def run_audit(request: AuditSimulateRequest, user: CurrentUser = Depends(get_current_user)):
     """Run an audit simulation."""
