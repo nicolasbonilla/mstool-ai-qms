@@ -125,11 +125,11 @@ export default function GuidePage() {
 
           {/* QMS Manager */}
           <div className="bg-gradient-to-r from-teal/5 to-sky-50/30 border border-teal/10 rounded-2xl p-6">
-            <h4 className="font-semibold text-gray-900 mb-3">For QMS Managers</h4>
+            <h4 className="font-semibold text-[var(--text-primary)] mb-3">For QMS Managers</h4>
             <div className="space-y-4">
               <div>
                 <p className="text-sm font-medium text-gray-800 mb-2">Weekly:</p>
-                <ul className="text-sm text-gray-700 space-y-1 ml-4">
+                <ul className="text-sm text-[var(--text-secondary)] space-y-1 ml-4">
                   <li>1. Run a <strong>Full Audit</strong> simulation and review gaps</li>
                   <li>2. Review audit trail for completeness</li>
                   <li>3. Check document freshness on <strong>Doc Sync</strong> — update any "Outdated" docs</li>
@@ -138,7 +138,7 @@ export default function GuidePage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-800 mb-2">Monthly:</p>
-                <ul className="text-sm text-gray-700 space-y-1 ml-4">
+                <ul className="text-sm text-[var(--text-secondary)] space-y-1 ml-4">
                   <li>1. Review SOUP dependency scan — ensure no unmitigated critical CVEs</li>
                   <li>2. Run <strong>Random Commit Audit</strong> and <strong>Random Requirement Audit</strong></li>
                   <li>3. Complete <strong>TPL-07 SOUP Vulnerability Review</strong></li>
@@ -147,7 +147,7 @@ export default function GuidePage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-800 mb-2">Before external audit:</p>
-                <ul className="text-sm text-gray-700 space-y-1 ml-4">
+                <ul className="text-sm text-[var(--text-secondary)] space-y-1 ml-4">
                   <li>1. Run Full Audit — score must be &gt;95%</li>
                   <li>2. Review all Traceability orphans</li>
                   <li>3. Ensure all forms are signed and approved</li>
@@ -167,22 +167,22 @@ export default function GuidePage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gradient-to-r from-gray-50 to-gray-50/50 border-b border-gray-100">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Template</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Title</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Standard</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">When to Use</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Responsible</th>
+              <tr className="bg-gradient-to-r from-gray-50 to-gray-50/50 border-b border-[var(--card-border)]">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)]">Template</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)]">Title</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)]">Standard</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)]">When to Use</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)]">Responsible</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {TEMPLATE_REF.map((t) => (
                 <tr key={t.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono font-semibold text-teal">{t.id}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{t.title}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{t.clause}</td>
-                  <td className="px-4 py-3 text-gray-700">{t.when}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{t.who}</td>
+                  <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{t.title}</td>
+                  <td className="px-4 py-3 text-[var(--text-muted)] text-xs">{t.clause}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{t.when}</td>
+                  <td className="px-4 py-3 text-[var(--text-muted)] text-xs">{t.who}</td>
                 </tr>
               ))}
             </tbody>
@@ -196,10 +196,10 @@ export default function GuidePage() {
       icon: BookOpen,
       content: (
         <div className="space-y-6">
-          <div className="bg-white border border-gray-100/80 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
-            <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2"><span className="text-blue-500">Dashboard</span></h4>
-            <p className="text-sm text-gray-600 mb-3">Real-time compliance scores from your repository. Shows IEC 62304, ISO 13485, Cybersecurity, and CE Mark scores.</p>
-            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
+          <div className="bg-white border border-[var(--card-border)] rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
+            <h4 className="font-semibold text-[var(--text-primary)] mb-2 flex items-center gap-2"><span className="text-blue-500">Dashboard</span></h4>
+            <p className="text-sm text-[var(--text-secondary)] mb-3">Real-time compliance scores from your repository. Shows IEC 62304, ISO 13485, Cybersecurity, and CE Mark scores.</p>
+            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] space-y-1.5">
               <p><strong>Score &ge;80%</strong> = green (on track)</p>
               <p><strong>Score 60-80%</strong> = yellow (needs attention)</p>
               <p><strong>Score &lt;60%</strong> = red (immediate action required)</p>
@@ -207,10 +207,10 @@ export default function GuidePage() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-100/80 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
-            <h4 className="font-semibold text-gray-900 mb-2"><span className="text-blue-500">Forms</span></h4>
-            <p className="text-sm text-gray-600 mb-3">Create, fill, sign, and approve regulatory forms. All 11 templates with complete fields per standard.</p>
-            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
+          <div className="bg-white border border-[var(--card-border)] rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
+            <h4 className="font-semibold text-[var(--text-primary)] mb-2"><span className="text-blue-500">Forms</span></h4>
+            <p className="text-sm text-[var(--text-secondary)] mb-3">Create, fill, sign, and approve regulatory forms. All 11 templates with complete fields per standard.</p>
+            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] space-y-1.5">
               <p><strong>Create</strong>: Click "+ New" &rarr; select template &rarr; form opens in Draft</p>
               <p><strong>Fill</strong>: Complete all required fields (*) &rarr; click "Save"</p>
               <p><strong>Sign</strong>: Click "Sign" to add your electronic signature</p>
@@ -220,20 +220,20 @@ export default function GuidePage() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-100/80 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
-            <h4 className="font-semibold text-gray-900 mb-2"><span className="text-blue-500">Traceability</span></h4>
-            <p className="text-sm text-gray-600 mb-3">Interactive graph showing REQ &rarr; Architecture &rarr; Code &rarr; Tests &rarr; Risk Controls.</p>
-            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
+          <div className="bg-white border border-[var(--card-border)] rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
+            <h4 className="font-semibold text-[var(--text-primary)] mb-2"><span className="text-blue-500">Traceability</span></h4>
+            <p className="text-sm text-[var(--text-secondary)] mb-3">Interactive graph showing REQ &rarr; Architecture &rarr; Code &rarr; Tests &rarr; Risk Controls.</p>
+            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] space-y-1.5">
               <p><strong>Blue</strong> = Requirements | <strong>Purple</strong> = Architecture | <strong>Green</strong> = Code | <strong>Amber</strong> = Tests | <strong>Red</strong> = Risk Controls</p>
               <p><strong>Orphans</strong> (right panel): Items without connections = compliance gaps</p>
               <p className="mt-2">When an auditor asks "show me the test for REQ-FUNC-040", use this page to trace the path.</p>
             </div>
           </div>
 
-          <div className="bg-white border border-gray-100/80 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
-            <h4 className="font-semibold text-gray-900 mb-2"><span className="text-blue-500">Audit</span></h4>
-            <p className="text-sm text-gray-600 mb-3">Simulate a real IEC 62304 audit. Three modes: Full, Random Commit, Random Requirement.</p>
-            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
+          <div className="bg-white border border-[var(--card-border)] rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
+            <h4 className="font-semibold text-[var(--text-primary)] mb-2"><span className="text-blue-500">Audit</span></h4>
+            <p className="text-sm text-[var(--text-secondary)] mb-3">Simulate a real IEC 62304 audit. Three modes: Full, Random Commit, Random Requirement.</p>
+            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] space-y-1.5">
               <p><strong>Full Audit</strong>: Checks all 20 IEC 62304 clauses (5.1-9.3). Use before external audit.</p>
               <p><strong>Random Commit</strong>: Picks a commit and traces to requirements + CI. Weekly spot-check.</p>
               <p><strong>Random Requirement</strong>: Picks a REQ and traces all evidence. Weekly spot-check.</p>
@@ -241,10 +241,10 @@ export default function GuidePage() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-100/80 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
-            <h4 className="font-semibold text-gray-900 mb-2"><span className="text-blue-500">SOUP</span></h4>
-            <p className="text-sm text-gray-600 mb-3">Software of Unknown Provenance — tracks all dependencies and checks for CVE vulnerabilities.</p>
-            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
+          <div className="bg-white border border-[var(--card-border)] rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
+            <h4 className="font-semibold text-[var(--text-primary)] mb-2"><span className="text-blue-500">SOUP</span></h4>
+            <p className="text-sm text-[var(--text-secondary)] mb-3">Software of Unknown Provenance — tracks all dependencies and checks for CVE vulnerabilities.</p>
+            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] space-y-1.5">
               <p><strong>Class C</strong> (red): Clinical data processing (nibabel, numpy, scipy, pydicom)</p>
               <p><strong>Class B</strong> (yellow): Core app logic (fastapi, react, firebase)</p>
               <p><strong>Class A</strong> (green): Dev/build tools (pytest, vite, typescript)</p>
@@ -252,10 +252,10 @@ export default function GuidePage() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-100/80 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
-            <h4 className="font-semibold text-gray-900 mb-2"><span className="text-blue-500">Doc Sync</span></h4>
-            <p className="text-sm text-gray-600 mb-3">Tracks all regulatory documents with freshness indicators.</p>
-            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-gray-600 space-y-1.5">
+          <div className="bg-white border border-[var(--card-border)] rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all duration-200">
+            <h4 className="font-semibold text-[var(--text-primary)] mb-2"><span className="text-blue-500">Doc Sync</span></h4>
+            <p className="text-sm text-[var(--text-secondary)] mb-3">Tracks all regulatory documents with freshness indicators.</p>
+            <div className="bg-gradient-to-r from-gray-50 to-gray-50/30 rounded-xl p-4 text-xs text-[var(--text-secondary)] space-y-1.5">
               <p><strong>Green</strong> = Fresh (modified within 30 days)</p>
               <p><strong>Yellow</strong> = Review needed (30-90 days)</p>
               <p><strong>Red</strong> = Outdated (&gt;90 days) — update required</p>
@@ -272,18 +272,18 @@ export default function GuidePage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gradient-to-r from-gray-50 to-gray-50/50 border-b border-gray-100">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Permissions</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Typical Person</th>
+              <tr className="bg-gradient-to-r from-gray-50 to-gray-50/50 border-b border-[var(--card-border)]">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)]">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)]">Permissions</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)]">Typical Person</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {ROLES_DATA.map((r) => (
                 <tr key={r.role} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-semibold text-gray-900">{r.role}</td>
-                  <td className="px-4 py-3 text-gray-700">{r.permissions}</td>
-                  <td className="px-4 py-3 text-gray-500">{r.typical}</td>
+                  <td className="px-4 py-3 font-semibold text-[var(--text-primary)]">{r.role}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{r.permissions}</td>
+                  <td className="px-4 py-3 text-[var(--text-muted)]">{r.typical}</td>
                 </tr>
               ))}
             </tbody>
@@ -317,10 +317,10 @@ export default function GuidePage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gradient-to-r from-gray-50 to-gray-50/50 border-b border-gray-100">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Clause</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Title</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">QMS Feature</th>
+              <tr className="bg-gradient-to-r from-gray-50 to-gray-50/50 border-b border-[var(--card-border)]">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)]">Clause</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)]">Title</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-secondary)]">QMS Feature</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -348,8 +348,8 @@ export default function GuidePage() {
               ].map(([clause, title, feature]) => (
                 <tr key={clause} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono font-semibold text-teal">{clause}</td>
-                  <td className="px-4 py-3 text-gray-900">{title}</td>
-                  <td className="px-4 py-3 text-gray-600">{feature}</td>
+                  <td className="px-4 py-3 text-[var(--text-primary)]">{title}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{feature}</td>
                 </tr>
               ))}
             </tbody>
@@ -362,11 +362,11 @@ export default function GuidePage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">QMS Operational Guide</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">QMS Operational Guide</h1>
+        <p className="text-sm text-[var(--text-muted)] mt-1">
           Step-by-step instructions for daily use of MSTool-AI-QMS
         </p>
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-[var(--text-muted)] mt-1">
           IEC 62304:2006+A1:2015 | ISO 13485:2016 | IEC 81001-5-1:2021 | EU MDR 2017/745
         </p>
       </div>
@@ -376,19 +376,19 @@ export default function GuidePage() {
           const isOpen = expandedSection === section.id;
           const Icon = section.icon;
           return (
-            <div key={section.id} className="bg-white rounded-2xl border border-gray-100/80 shadow-card hover:shadow-card-hover transition-all duration-200 overflow-hidden">
+            <div key={section.id} className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 overflow-hidden">
               <button
                 onClick={() => toggle(section.id)}
-                className="w-full flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition text-left"
+                className="w-full flex items-center gap-4 px-6 py-4 hover:bg-[var(--bg-tertiary)] transition text-left"
               >
                 <div className="p-2.5 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.1), rgba(139,92,246,0.08))' }}>
                   <Icon size={20} className="text-teal" />
                 </div>
-                <span className="flex-1 text-base font-semibold text-gray-900">{section.title}</span>
-                {isOpen ? <ChevronDown size={20} className="text-gray-400" /> : <ChevronRight size={20} className="text-gray-400" />}
+                <span className="flex-1 text-base font-semibold text-[var(--text-primary)]">{section.title}</span>
+                {isOpen ? <ChevronDown size={20} className="text-[var(--text-muted)]" /> : <ChevronRight size={20} className="text-[var(--text-muted)]" />}
               </button>
               {isOpen && (
-                <div className="px-6 pb-6 border-t border-gray-100 pt-4">
+                <div className="px-6 pb-6 border-t border-[var(--card-border)] pt-4">
                   {section.content}
                 </div>
               )}

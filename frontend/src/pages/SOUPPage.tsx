@@ -52,8 +52,8 @@ export default function SOUPPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">SOUP Monitor</h1>
-          <p className="text-sm text-gray-500 mt-1">Software of Unknown Provenance — IEC 81001-5-1</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">SOUP Monitor</h1>
+          <p className="text-sm text-[var(--text-muted)] mt-1">Software of Unknown Provenance — IEC 81001-5-1</p>
         </div>
         <button onClick={handleScan} disabled={scanning}
           className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold text-white rounded-xl disabled:opacity-50 transition-all duration-200 hover:shadow-lg hover:shadow-teal/20 active:scale-[0.98]"
@@ -65,28 +65,28 @@ export default function SOUPPage() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
-            <p className="text-xs text-gray-500 mb-1">Total Dependencies</p>
-            <p className="text-2xl font-bold text-gray-900">{summary.total_dependencies}</p>
-            <p className="text-xs text-gray-400">{summary.backend} backend / {summary.frontend} frontend</p>
+          <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
+            <p className="text-xs text-[var(--text-muted)] mb-1">Total Dependencies</p>
+            <p className="text-2xl font-bold text-[var(--text-primary)]">{summary.total_dependencies}</p>
+            <p className="text-xs text-[var(--text-muted)]">{summary.backend} backend / {summary.frontend} frontend</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
-            <p className="text-xs text-gray-500 mb-1">Class C (Safety)</p>
+          <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
+            <p className="text-xs text-[var(--text-muted)] mb-1">Class C (Safety)</p>
             <p className="text-2xl font-bold text-red-600">{summary.by_safety_class.C}</p>
-            <p className="text-xs text-gray-400">Clinical data processing</p>
+            <p className="text-xs text-[var(--text-muted)]">Clinical data processing</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
-            <p className="text-xs text-gray-500 mb-1">SBOM Status</p>
+          <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
+            <p className="text-xs text-[var(--text-muted)] mb-1">SBOM Status</p>
             <p className={`text-2xl font-bold ${summary.sbom_exists ? 'text-green-600' : 'text-red-600'}`}>
               {summary.sbom_exists ? 'Present' : 'Missing'}
             </p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
-            <p className="text-xs text-gray-500 mb-1">Review Records</p>
+          <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-5">
+            <p className="text-xs text-[var(--text-muted)] mb-1">Review Records</p>
             <p className="text-2xl font-bold text-blue-600">{summary.review_records}</p>
-            <p className="text-xs text-gray-400">{summary.review_coverage_pct}% coverage</p>
+            <p className="text-xs text-[var(--text-muted)]">{summary.review_coverage_pct}% coverage</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center justify-center">
+          <div className="bg-white rounded-xl border border-[var(--border-default)] p-5 flex items-center justify-center">
             <ResponsiveContainer width={100} height={80}>
               <PieChart>
                 <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={20} outerRadius={35}>
@@ -115,7 +115,7 @@ export default function SOUPPage() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="text-left text-xs text-gray-500 border-b border-red-200">
+              <thead><tr className="text-left text-xs text-[var(--text-muted)] border-b border-red-200">
                 <th className="pb-2">CVE ID</th><th className="pb-2">Package</th><th className="pb-2">Severity</th><th className="pb-2">CVSS</th><th className="pb-2">Description</th>
               </tr></thead>
               <tbody>
@@ -125,7 +125,7 @@ export default function SOUPPage() {
                     <td className="py-2">{v.package}</td>
                     <td className="py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${SEV_COLORS[v.severity] || ''}`}>{v.severity}</span></td>
                     <td className="py-2">{v.cvss_score}</td>
-                    <td className="py-2 text-xs text-gray-600 max-w-xs truncate">{v.description}</td>
+                    <td className="py-2 text-xs text-[var(--text-secondary)] max-w-xs truncate">{v.description}</td>
                   </tr>
                 ))}
               </tbody>
@@ -135,17 +135,17 @@ export default function SOUPPage() {
       )}
 
       {/* Dependencies Table */}
-      <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card">
-        <div className="p-4 border-b border-gray-100 flex items-center gap-4">
+      <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card">
+        <div className="p-4 border-b border-[var(--card-border)] flex items-center gap-4">
           <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
+            <Search size={14} className="absolute left-3 top-2.5 text-[var(--text-muted)]" />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search packages..." className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-teal" />
+              placeholder="Search packages..." className="w-full pl-9 pr-3 py-2 text-sm border border-[var(--border-default)] rounded-lg focus:outline-none focus:border-teal" />
           </div>
           <div className="flex gap-2">
             {['', 'A', 'B', 'C'].map(c => (
               <button key={c} onClick={() => setFilterClass(c)}
-                className={`px-3 py-1.5 text-xs rounded-lg ${filterClass === c ? 'bg-navy text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                className={`px-3 py-1.5 text-xs rounded-lg ${filterClass === c ? 'bg-navy text-white' : 'bg-gray-100 text-[var(--text-secondary)] hover:bg-gray-200'}`}>
                 {c || 'All'}
               </button>
             ))}
@@ -153,13 +153,13 @@ export default function SOUPPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-xs text-gray-500 border-b border-gray-100">
+            <thead><tr className="text-left text-xs text-[var(--text-muted)] border-b border-[var(--card-border)]">
               <th className="px-4 py-3">Package</th><th className="px-4 py-3">Version</th><th className="px-4 py-3">Source</th>
               <th className="px-4 py-3">Safety Class</th><th className="px-4 py-3">Pinned</th>
             </tr></thead>
             <tbody>
               {filtered.map((d, i) => (
-                <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr key={i} className="border-b border-[var(--border-subtle)] hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{d.name}</td>
                   <td className="px-4 py-3 font-mono text-xs">{d.version}</td>
                   <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${d.source === 'backend' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{d.source}</span></td>
@@ -170,7 +170,7 @@ export default function SOUPPage() {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-100">
+        <div className="px-4 py-3 text-xs text-[var(--text-muted)] border-t border-[var(--card-border)]">
           Showing {filtered.length} of {deps.length} dependencies
         </div>
       </div>

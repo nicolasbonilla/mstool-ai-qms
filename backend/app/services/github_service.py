@@ -94,6 +94,57 @@ class GitHubService:
         data = self._get(f"contents/{file_path}")
         return data is not None
 
+    def get_file_lines(self, file_path: str) -> Optional[List[str]]:
+        """Get file content split into indexed lines."""
+        content = self.get_file_content(file_path)
+        if content is None:
+            return None
+        return content.split('\n')
+
+    def search_in_file(self, file_path: str, pattern: str, context: int = 3) -> List[Dict[str, Any]]:
+        """Search for a regex pattern in a file and return matching lines with context and GitHub URLs."""
+        import re
+        lines = self.get_file_lines(file_path)
+        if not lines:
+            return []
+
+        github_base = f"https://github.com/{self.repo}/blob/main"
+        matches = []
+
+        for i, line in enumerate(lines):
+            if re.search(pattern, line):
+                # Get context lines
+                start = max(0, i - context)
+                end = min(len(lines), i + context + 1)
+                snippet_lines = [
+                    {"number": j + 1, "text": lines[j], "highlighted": j == i}
+                    for j in range(start, end)
+                ]
+                matches.append({
+                    "line_number": i + 1,
+                    "text": line.strip(),
+                    "github_url": f"{github_base}/{file_path}#L{i + 1}",
+                    "snippet": snippet_lines,
+                })
+
+        return matches
+
+    def get_code_snippet(self, file_path: str, line_start: int, line_end: int) -> Dict[str, Any]:
+        """Get a specific range of lines from a file."""
+        lines = self.get_file_lines(file_path)
+        if not lines:
+            return {"lines": [], "github_url": ""}
+
+        github_base = f"https://github.com/{self.repo}/blob/main"
+        start = max(0, line_start - 1)
+        end = min(len(lines), line_end)
+
+        return {
+            "lines": [{"number": i + 1, "text": lines[i], "highlighted": False} for i in range(start, end)],
+            "github_url": f"{github_base}/{file_path}#L{line_start}-L{line_end}",
+            "file": file_path,
+        }
+
     def list_files_recursive(self, dir_path: str, extension: str = ".md") -> List[Dict[str, Any]]:
         """List all files with given extension in a directory (non-recursive via tree API)."""
         # Use Git Trees API for efficient recursive listing

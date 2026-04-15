@@ -60,8 +60,8 @@ export default function AuditPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Audit Simulator</h1>
-          <p className="text-sm text-gray-500 mt-1">IEC 62304:2006+A1:2015 compliance audit simulation</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Audit Simulator</h1>
+          <p className="text-sm text-[var(--text-muted)] mt-1">IEC 62304:2006+A1:2015 compliance audit simulation</p>
         </div>
         {result && (
           <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2 bg-navy text-white rounded-lg hover:bg-navy-light">
@@ -76,14 +76,14 @@ export default function AuditPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
           {MODES.map((mode) => (
             <button key={mode.id} onClick={() => handleRun(mode.id)}
-              className="bg-white rounded-2xl border border-gray-100/80 p-6 text-left shadow-card hover:shadow-card-hover hover:border-teal/30 transition-all duration-200 group active:scale-[0.98]">
+              className="bg-white rounded-2xl border border-[var(--card-border)] p-6 text-left shadow-card hover:shadow-card-hover hover:border-teal/30 transition-all duration-200 group active:scale-[0.98]">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-teal/10"
                 style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.1), rgba(139,92,246,0.08))' }}>
                 <mode.icon size={22} className="text-teal" />
               </div>
-              <h3 className="text-[15px] font-bold text-gray-900">{mode.title}</h3>
-              <p className="text-[13px] text-gray-500 mt-2 leading-relaxed">{mode.desc}</p>
-              <div className="flex items-center gap-4 mt-4 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              <h3 className="text-[15px] font-bold text-[var(--text-primary)]">{mode.title}</h3>
+              <p className="text-[13px] text-[var(--text-muted)] mt-2 leading-relaxed">{mode.desc}</p>
+              <div className="flex items-center gap-4 mt-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
                 <span>{mode.checks} checks</span><span>{mode.time}</span>
               </div>
             </button>
@@ -94,8 +94,8 @@ export default function AuditPage() {
       {loading && (
         <div className="flex flex-col items-center justify-center py-20">
           <div className="w-16 h-16 border-4 border-teal border-t-transparent rounded-full animate-spin mb-6" />
-          <p className="text-lg font-medium text-gray-700">Running audit simulation...</p>
-          <p className="text-sm text-gray-400 mt-2">Analyzing repository clause by clause</p>
+          <p className="text-lg font-medium text-[var(--text-secondary)]">Running audit simulation...</p>
+          <p className="text-sm text-[var(--text-muted)] mt-2">Analyzing repository clause by clause</p>
         </div>
       )}
 
@@ -123,21 +123,21 @@ export default function AuditPage() {
               { label: 'Adequate', count: result.summary.adequate, bg: 'bg-amber-500/10', text: 'text-amber-600', icon: Clock, desc: 'Partial evidence' },
               { label: 'Weak/Missing', count: result.summary.weak + result.summary.missing, bg: 'bg-red-500/10', text: 'text-red-500', icon: XCircle, desc: 'Needs attention' },
             ].map(({ label, count, bg, text, icon: Icon, desc }) => (
-              <div key={label} className="bg-white rounded-2xl border border-gray-100/80 shadow-card hover:shadow-card-hover transition-all duration-200 p-6">
+              <div key={label} className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card hover:shadow-card-hover transition-all duration-200 p-6">
                 <div className="flex items-center gap-2.5 mb-3">
                   <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}><Icon size={16} className={text} /></div>
-                  <span className="text-[13px] font-bold text-gray-700">{label}</span>
+                  <span className="text-[13px] font-bold text-[var(--text-secondary)]">{label}</span>
                 </div>
                 <span className={`text-[28px] font-extrabold ${text}`}>{count}</span>
-                <p className="text-[11px] text-gray-400 mt-1">{desc}</p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-1">{desc}</p>
               </div>
             ))}
           </div>
 
           {groups && Object.entries(groups).map(([group, questions]) => (
             <div key={group} className="mb-6">
-              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">{group}</h3>
-              <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card divide-y divide-gray-50">
+              <h3 className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3">{group}</h3>
+              <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card divide-y divide-gray-50">
                 {questions.map((q) => {
                   const style = SCORE_STYLES[q.score] || SCORE_STYLES.missing;
                   const Icon = style.icon;
@@ -145,26 +145,26 @@ export default function AuditPage() {
                   return (
                     <div key={q.clause}>
                       <button onClick={() => setExpandedClause(isOpen ? null : q.clause)}
-                        className="w-full flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition text-left">
-                        <span className="font-mono text-sm text-gray-400 w-12 shrink-0">{q.clause}</span>
+                        className="w-full flex items-center gap-4 px-6 py-4 hover:bg-[var(--bg-tertiary)] transition text-left">
+                        <span className="font-mono text-sm text-[var(--text-muted)] w-12 shrink-0">{q.clause}</span>
                         <span className="flex-1 text-sm text-gray-800">{q.question}</span>
                         <span className={`text-xs px-3 py-1 rounded-full flex items-center gap-1 shrink-0 ${style.bg} ${style.text}`}>
                           <Icon size={12} /> {q.score.toUpperCase()}
                         </span>
-                        <ChevronDown size={16} className={`text-gray-400 transition ${isOpen ? 'rotate-180' : ''}`} />
+                        <ChevronDown size={16} className={`text-[var(--text-muted)] transition ${isOpen ? 'rotate-180' : ''}`} />
                       </button>
                       {isOpen && (
                         <div className="px-6 pb-4 bg-gradient-to-b from-gray-50/80 to-white">
                           <div className="ml-12">
-                            <p className="text-xs font-medium text-gray-500 mb-2">Checks:</p>
-                            <ul className="text-xs text-gray-600 space-y-1 mb-3">{q.checks.map((c, i) => <li key={i}>- {c}</li>)}</ul>
+                            <p className="text-xs font-medium text-[var(--text-muted)] mb-2">Checks:</p>
+                            <ul className="text-xs text-[var(--text-secondary)] space-y-1 mb-3">{q.checks.map((c, i) => <li key={i}>- {c}</li>)}</ul>
                             {q.evidence.length > 0 && (<>
-                              <p className="text-xs font-medium text-gray-500 mb-2">Evidence:</p>
+                              <p className="text-xs font-medium text-[var(--text-muted)] mb-2">Evidence:</p>
                               {q.evidence.map((e, i) => (
-                                <div key={i} className="text-xs bg-white rounded-lg border border-gray-200 p-3 mb-2">
-                                  <span className="text-gray-400 uppercase mr-2">{e.type}</span>
-                                  <span className="font-mono text-gray-600">{e.reference}</span>
-                                  <p className="text-gray-700 mt-1">{e.content}</p>
+                                <div key={i} className="text-xs bg-white rounded-lg border border-[var(--border-default)] p-3 mb-2">
+                                  <span className="text-[var(--text-muted)] uppercase mr-2">{e.type}</span>
+                                  <span className="font-mono text-[var(--text-secondary)]">{e.reference}</span>
+                                  <p className="text-[var(--text-secondary)] mt-1">{e.content}</p>
                                 </div>
                               ))}
                             </>)}
@@ -180,13 +180,13 @@ export default function AuditPage() {
 
           {result.gaps.length > 0 && (
             <div className="mb-8">
-              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Identified Gaps</h3>
-              <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card p-6 space-y-3">
+              <h3 className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3">Identified Gaps</h3>
+              <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card p-6 space-y-3">
                 {result.gaps.map((gap, i) => (
                   <div key={i} className={`p-4 rounded-xl border ${gap.severity === 'critical' ? 'bg-gradient-to-r from-red-50 to-orange-50/50 border-red-200/60' : 'bg-gradient-to-r from-amber-50 to-yellow-50/50 border-amber-200/60'}`}>
                     <span className={`text-xs font-bold uppercase ${gap.severity === 'critical' ? 'text-red-700' : 'text-yellow-700'}`}>{gap.severity}</span>
-                    <span className="font-mono text-xs text-gray-500 ml-2">Clause {gap.clause}</span>
-                    <p className="text-sm text-gray-700 mt-1">{gap.recommendation}</p>
+                    <span className="font-mono text-xs text-[var(--text-muted)] ml-2">Clause {gap.clause}</span>
+                    <p className="text-sm text-[var(--text-secondary)] mt-1">{gap.recommendation}</p>
                   </div>
                 ))}
               </div>

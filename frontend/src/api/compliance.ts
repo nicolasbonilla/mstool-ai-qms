@@ -11,3 +11,4 @@ export const getPullRequests = (state = 'all', count = 30) =>
   apiClient.get('/compliance/pull-requests', { params: { state, count } });
 export const getCIRuns = (count = 10) => apiClient.get('/compliance/ci-runs', { params: { count } });
 export const getTraceabilityGraph = () => apiClient.get('/compliance/traceability');
+export const getCheckEvidence = (checkId: string) => apiClient.get(`/compliance/check/${checkId}/evidence`);

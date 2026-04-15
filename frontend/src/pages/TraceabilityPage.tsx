@@ -128,8 +128,8 @@ export default function TraceabilityPage() {
     <div className="h-[calc(100vh-6rem)]">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Traceability Explorer</h1>
-          <p className="text-sm text-gray-500">REQ → Architecture → Code → Tests → Risk Controls</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Traceability Explorer</h1>
+          <p className="text-sm text-[var(--text-muted)]">REQ → Architecture → Code → Tests → Risk Controls</p>
         </div>
         <div className="flex items-center gap-4 text-xs">
           {Object.entries(TYPE_COLORS).map(([type, color]) => {
@@ -146,7 +146,7 @@ export default function TraceabilityPage() {
 
       <div className="flex gap-4 h-[calc(100%-4rem)]">
         {/* Graph */}
-        <div className="flex-1 bg-white rounded-2xl border border-gray-100/80 shadow-card overflow-hidden">
+        <div className="flex-1 bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-card overflow-hidden">
           <ReactFlow nodes={rfNodes} edges={rfEdges} onNodeClick={onNodeClick} fitView
             minZoom={0.2} maxZoom={2} defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}>
             <Controls />
@@ -157,20 +157,20 @@ export default function TraceabilityPage() {
 
         {/* Orphans Panel */}
         <div className="w-72 shrink-0 space-y-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+          <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card p-4">
+            <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-3 flex items-center gap-2">
               <GitBranch size={16} /> Stats
             </h3>
             <div className="space-y-2 text-xs">
-              <div className="flex justify-between"><span className="text-gray-500">Nodes</span><span className="font-medium">{data.stats.total_nodes}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Edges</span><span className="font-medium">{data.stats.total_edges}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Requirements</span><span className="font-medium">{data.stats.requirements}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Tests</span><span className="font-medium">{data.stats.tests}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Nodes</span><span className="font-medium">{data.stats.total_nodes}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Edges</span><span className="font-medium">{data.stats.total_edges}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Requirements</span><span className="font-medium">{data.stats.requirements}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Tests</span><span className="font-medium">{data.stats.tests}</span></div>
             </div>
           </div>
 
           {totalOrphans > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100/80 shadow-card p-4">
+            <div className="bg-white rounded-2xl border border-[var(--card-border)] shadow-card p-4">
               <h3 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
                 <AlertTriangle size={16} /> Orphans ({totalOrphans})
               </h3>
@@ -178,7 +178,7 @@ export default function TraceabilityPage() {
                 <div className="mb-3">
                   <p className="text-xs font-medium text-red-600 mb-1">REQs without tests:</p>
                   {data.orphans.requirements_without_tests.slice(0, 10).map(id => (
-                    <p key={id} className="text-xs text-gray-600 font-mono">{id}</p>
+                    <p key={id} className="text-xs text-[var(--text-secondary)] font-mono">{id}</p>
                   ))}
                 </div>
               )}
@@ -186,7 +186,7 @@ export default function TraceabilityPage() {
                 <div className="mb-3">
                   <p className="text-xs font-medium text-red-600 mb-1">Risks without verification:</p>
                   {data.orphans.risk_controls_without_verification.slice(0, 10).map(id => (
-                    <p key={id} className="text-xs text-gray-600 font-mono">{id}</p>
+                    <p key={id} className="text-xs text-[var(--text-secondary)] font-mono">{id}</p>
                   ))}
                 </div>
               )}
@@ -194,7 +194,7 @@ export default function TraceabilityPage() {
                 <div>
                   <p className="text-xs font-medium text-yellow-600 mb-1">Code without REQs:</p>
                   {data.orphans.code_without_requirements.slice(0, 10).map(id => (
-                    <p key={id} className="text-xs text-gray-600 font-mono">{id}</p>
+                    <p key={id} className="text-xs text-[var(--text-secondary)] font-mono">{id}</p>
                   ))}
                 </div>
               )}

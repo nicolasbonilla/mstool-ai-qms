@@ -37,6 +37,16 @@ async def get_detailed_compliance_score(user: CurrentUser = Depends(get_current_
         raise HTTPException(status_code=503, detail=str(e))
 
 
+@router.get("/check/{check_id}/evidence")
+async def get_check_evidence(check_id: str, user: CurrentUser = Depends(get_current_user)):
+    """Get deep evidence with code snippets for a specific compliance check."""
+    try:
+        service = _get_service()
+        return service.get_check_evidence(check_id)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+
 @router.get("/auth-coverage")
 async def get_auth_coverage(user: CurrentUser = Depends(get_current_user)):
     """Detailed authentication coverage per route file."""

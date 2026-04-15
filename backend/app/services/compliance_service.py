@@ -169,6 +169,211 @@ class ComplianceService:
         """Get CI workflow runs from GitHub."""
         return self.github.get_ci_runs(count)
 
+    # ─── Deep evidence with code snippets ───
+
+    def get_check_evidence(self, check_id: str) -> Dict[str, Any]:
+        """Get deep evidence with actual code snippets for a compliance check."""
+        github_base = f"https://github.com/{self.github.repo}/blob/main"
+
+        if check_id == "auth_coverage":
+            return self._evidence_auth_coverage(github_base)
+        elif check_id == "input_validation":
+            return self._evidence_input_validation(github_base)
+        elif check_id == "test_coverage":
+            return self._evidence_test_coverage(github_base)
+        elif check_id == "risk_verification":
+            return self._evidence_risk_verification(github_base)
+        elif check_id == "doc_completeness":
+            return self._evidence_doc_completeness(github_base)
+        elif check_id == "codeowners_coverage":
+            return self._evidence_codeowners(github_base)
+        else:
+            return {"check_id": check_id, "evidence": [], "code_snippets": []}
+
+    def _evidence_auth_coverage(self, github_base: str) -> Dict:
+        """Deep evidence for auth coverage — shows actual auth decorator lines."""
+        files = self.github.list_directory("backend/app/api/routes")
+        evidence = []
+        for f in (files or []):
+            if not f["name"].endswith(".py") or f["name"].startswith("__"):
+                continue
+            matches = self.github.search_in_file(f["path"], r"get_current_active_user|Depends\(get_current", context=2)
+            endpoints = self.github.search_in_file(f["path"], r"async def \w+\(", context=1)
+            evidence.append({
+                "file": f["name"],
+                "path": f["path"],
+                "github_url": f"{github_base}/{f['path']}",
+                "total_endpoints": len(endpoints),
+                "protected_endpoints": len(matches),
+                "status": "pass" if len(matches) >= len(endpoints) and len(endpoints) > 0 else "fail",
+                "auth_lines": [{"line": m["line_number"], "text": m["text"], "url": m["github_url"], "snippet": m["snippet"]} for m in matches[:5]],
+                "endpoint_lines": [{"line": e["line_number"], "text": e["text"], "url": e["github_url"]} for e in endpoints],
+            })
+        total_ep = sum(e["total_endpoints"] for e in evidence)
+        total_protected = sum(e["protected_endpoints"] for e in evidence)
+        return {
+            "check_id": "auth_coverage",
+            "score": round((total_protected / total_ep) * 100, 1) if total_ep > 0 else 0,
+            "calculation": f"{total_protected} / {total_ep} endpoints protected = {round((total_protected / total_ep) * 100, 1) if total_ep > 0 else 0}%",
+            "evidence": evidence,
+        }
+
+    def _evidence_input_validation(self, github_base: str) -> Dict:
+        """Deep evidence for input validation — shows actual validation code."""
+        paths = [
+            "backend/app/services/brain_volumetry_service.py",
+            "backend/app/services/lesion_analysis_service.py",
+            "backend/app/services/ms_region_classifier.py",
+            "backend/app/utils/nifti_utils.py",
+            "backend/app/utils/dicom_utils.py",
+        ]
+        evidence = []
+        validated = 0
+        for path in paths:
+            matches = self.github.search_in_file(path, r"raise ValueError|REQ-SAFE-005", context=3)
+            has_validation = len(matches) > 0
+            if has_validation:
+                validated += 1
+            evidence.append({
+                "file": path.split("/")[-1],
+                "path": path,
+                "github_url": f"{github_base}/{path}",
+                "status": "pass" if has_validation else "fail",
+                "validation_count": len(matches),
+                "validation_lines": [{"line": m["line_number"], "text": m["text"], "url": m["github_url"], "snippet": m["snippet"]} for m in matches[:5]],
+            })
+        score = round((validated / len(paths)) * 100, 1)
+        return {
+            "check_id": "input_validation",
+            "score": score,
+            "calculation": f"{validated} / {len(paths)} Class C modules validated = {score}%",
+            "evidence": evidence,
+        }
+
+    def _evidence_test_coverage(self, github_base: str) -> Dict:
+        """Deep evidence for test coverage — shows test function signatures."""
+        modules = ["ai_segmentation_service", "brain_volumetry_service", "brain_report_service",
+                    "lesion_analysis_service", "ms_region_classifier", "nifti_utils", "dicom_utils", "dicom_seg"]
+        test_files = self.github.list_directory("backend/tests/unit")
+        test_names = [f["name"].replace(".py", "") for f in (test_files or []) if f["name"].startswith("test_")]
+
+        evidence = []
+        covered = 0
+        for m in modules:
+            has_test = f"test_{m}" in test_names
+            if has_test:
+                covered += 1
+            test_info = {"file": f"{m}.py", "path": f"backend/app/services/{m}.py" if "utils" not in m else f"backend/app/utils/{m}.py",
+                         "github_url": f"{github_base}/backend/app/services/{m}.py" if "utils" not in m else f"{github_base}/backend/app/utils/{m}.py",
+                         "status": "pass" if has_test else "fail", "test_file": f"test_{m}.py" if has_test else None,
+                         "test_url": f"{github_base}/backend/tests/unit/test_{m}.py" if has_test else None, "test_functions": []}
+            if has_test:
+                funcs = self.github.search_in_file(f"backend/tests/unit/test_{m}.py", r"def test_\w+", context=0)
+                test_info["test_functions"] = [{"name": f["text"].strip(), "line": f["line_number"], "url": f["github_url"]} for f in funcs[:10]]
+            evidence.append(test_info)
+
+        score = round((covered / len(modules)) * 100, 1)
+        return {
+            "check_id": "test_coverage",
+            "score": score,
+            "calculation": f"{covered} / {len(modules)} critical modules with tests = {score}%",
+            "evidence": evidence,
+        }
+
+    def _evidence_risk_verification(self, github_base: str) -> Dict:
+        """Deep evidence for risk verification — shows VERIFIED/PARTIAL lines."""
+        records = self.github.list_directory("docs/iec62304/records/risk_verification")
+        if not records:
+            return {"check_id": "risk_verification", "score": 0, "calculation": "No records found", "evidence": []}
+
+        md_records = [r for r in records if r["name"].endswith(".md")]
+        if not md_records:
+            return {"check_id": "risk_verification", "score": 0, "calculation": "No records found", "evidence": []}
+
+        latest = sorted(md_records, key=lambda x: x["name"])[-1]
+        verified_matches = self.github.search_in_file(latest["path"], r"VERIFIED", context=1)
+        partial_matches = self.github.search_in_file(latest["path"], r"PARTIAL", context=1)
+
+        total = len(verified_matches) + len(partial_matches)
+        score = round((len(verified_matches) / total) * 100, 1) if total > 0 else 0
+
+        return {
+            "check_id": "risk_verification",
+            "score": score,
+            "calculation": f"{len(verified_matches)} VERIFIED + {len(partial_matches)} PARTIAL = {total} total → {score}%",
+            "evidence": [{
+                "file": latest["name"],
+                "path": latest["path"],
+                "github_url": f"{github_base}/{latest['path']}",
+                "verified_lines": [{"line": m["line_number"], "text": m["text"], "url": m["github_url"]} for m in verified_matches[:10]],
+                "partial_lines": [{"line": m["line_number"], "text": m["text"], "url": m["github_url"]} for m in partial_matches[:10]],
+            }],
+        }
+
+    def _evidence_doc_completeness(self, github_base: str) -> Dict:
+        """Deep evidence for document completeness — shows all docs found."""
+        expected = {"iec62304": 15, "qms": 8, "clinical": 3, "usability": 1, "mdr": 5, "ai-act": 1}
+        evidence = []
+        total_found = 0
+        total_expected = sum(expected.values())
+
+        for subdir, exp in expected.items():
+            files = self.github.list_directory(f"docs/{subdir}")
+            md_files = [f for f in files if f["name"].endswith(".md")]
+            found = min(len(md_files), exp)
+            total_found += found
+            evidence.append({
+                "standard": subdir,
+                "expected": exp,
+                "found": len(md_files),
+                "status": "pass" if len(md_files) >= exp else "fail",
+                "documents": [{"name": f["name"], "url": f"{github_base}/docs/{subdir}/{f['name']}"} for f in md_files],
+            })
+
+        score = round((total_found / total_expected) * 100, 1)
+        return {
+            "check_id": "doc_completeness",
+            "score": score,
+            "calculation": f"{total_found} / {total_expected} required documents = {score}%",
+            "evidence": evidence,
+        }
+
+    def _evidence_codeowners(self, github_base: str) -> Dict:
+        """Deep evidence for CODEOWNERS — shows which modules are covered."""
+        content = self.github.get_file_content(".github/CODEOWNERS")
+        modules = ["ai_segmentation_service.py", "brain_volumetry_service.py", "brain_report_service.py",
+                    "lesion_analysis_service.py", "ms_region_classifier.py", "nifti_utils.py", "dicom_utils.py", "edgeAI.worker.ts"]
+
+        if not content:
+            return {"check_id": "codeowners_coverage", "score": 0, "calculation": "CODEOWNERS file not found", "evidence": []}
+
+        lines = content.split('\n')
+        evidence = []
+        covered = 0
+        for m in modules:
+            found_line = None
+            for i, line in enumerate(lines):
+                if m in line:
+                    found_line = {"number": i + 1, "text": line.strip(), "url": f"{github_base}/.github/CODEOWNERS#L{i + 1}"}
+                    break
+            is_covered = found_line is not None
+            if is_covered:
+                covered += 1
+            evidence.append({
+                "module": m,
+                "status": "pass" if is_covered else "fail",
+                "codeowners_line": found_line,
+            })
+
+        score = round((covered / len(modules)) * 100, 1)
+        return {
+            "check_id": "codeowners_coverage",
+            "score": score,
+            "calculation": f"{covered} / {len(modules)} Class C modules in CODEOWNERS = {score}%",
+            "codeowners_url": f"{github_base}/.github/CODEOWNERS",
+            "evidence": evidence,
+        }
+
     # ─── Detailed score with evidence ───
 
     def compute_detailed_score(self) -> Dict[str, Any]:

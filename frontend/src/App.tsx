@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard, FileText, GitBranch, ShieldCheck,
-  Package, RefreshCw, Bell, LogOut, User, BookOpen,
-  ChevronRight,
+  Package, RefreshCw, LogOut, User, BookOpen,
+  Sun, Moon, ChevronRight,
 } from 'lucide-react';
 import { useAuthStore } from './store/useAuthStore';
+import { useThemeStore } from './store/useThemeStore';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import FormsPage from './pages/FormsPage';
@@ -16,7 +18,7 @@ import DocSyncPage from './pages/DocSyncPage';
 import GuidePage from './pages/GuidePage';
 import AIAssistant from './components/AIAssistant';
 
-const NAV_ITEMS = [
+const NAV = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/forms', label: 'Forms', icon: FileText },
   { path: '/traceability', label: 'Traceability', icon: GitBranch },
@@ -26,124 +28,134 @@ const NAV_ITEMS = [
   { path: '/guide', label: 'Guide', icon: BookOpen },
 ];
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Admin',
-  qms_manager: 'QMS Manager',
-  developer: 'Developer',
-  qa: 'QA',
-  clinical_advisor: 'Clinical Advisor',
-  viewer: 'Viewer',
+const ROLES: Record<string, string> = {
+  admin: 'Admin', qms_manager: 'QMS Manager', developer: 'Developer',
+  qa: 'QA', clinical_advisor: 'Clinical', viewer: 'Viewer',
 };
 
 export default function App() {
   const location = useLocation();
   const { user, profile, loading, init, logout } = useAuthStore();
+  const { theme, toggle: toggleTheme } = useThemeStore();
 
-  useEffect(() => {
-    const unsubscribe = init();
-    return unsubscribe;
-  }, [init]);
+  useEffect(() => { const unsub = init(); return unsub; }, [init]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-navy flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-2 border-teal border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-400 text-sm font-medium">Loading MSTool-AI-QMS...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
+      <div className="w-8 h-8 rounded-full border-[3px] border-t-transparent animate-spin" style={{ borderColor: 'var(--accent-teal)', borderTopColor: 'transparent' }} />
+    </div>
+  );
 
-  if (!user) {
-    return <LoginPage />;
-  }
+  if (!user) return <LoginPage />;
 
   return (
-    <div className="min-h-screen bg-surface-secondary flex">
-      {/* Sidebar */}
-      <aside className="w-[260px] bg-navy fixed h-full flex flex-col z-40">
+    <div className="h-screen flex overflow-hidden" style={{ background: 'var(--bg-secondary)' }}>
+      {/* ─── Sidebar ─── */}
+      <aside className="w-[260px] h-full flex flex-col shrink-0" style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}>
         {/* Brand */}
-        <div className="p-5 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-teal to-accent rounded-xl flex items-center justify-center shadow-glow-sm">
-              <ShieldCheck size={18} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-[15px] font-bold text-white tracking-tight">MSTool-AI-QMS</h1>
-              <p className="text-[10px] text-gray-500 font-medium">Regulatory Compliance</p>
-            </div>
+        <div className="h-14 px-5 flex items-center gap-3" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-glow-sm" style={{ background: 'linear-gradient(135deg, #0EA5E9, #8B5CF6)' }}>
+            <ShieldCheck size={16} className="text-white" strokeWidth={2.5} />
+          </div>
+          <div>
+            <p className="text-[14px] font-bold text-white leading-none tracking-tight">MSTool-AI</p>
+            <p className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--sidebar-text)' }}>Quality Management</p>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-2 space-y-0.5">
-          {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
+        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+          {NAV.map(({ path, label, icon: Icon }) => {
             const active = location.pathname === path;
             return (
-              <Link
-                key={path}
-                to={path}
-                className={`sidebar-item ${active ? 'sidebar-item-active' : 'sidebar-item-inactive'}`}
+              <Link key={path} to={path}
+                className="flex items-center gap-3 h-9 px-3 mx-1 rounded-lg text-[13px] font-medium transition-all duration-150"
+                style={{
+                  background: active ? 'var(--sidebar-active)' : 'transparent',
+                  color: active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)',
+                }}
+                onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+                onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)'; }}
               >
-                <Icon size={17} strokeWidth={active ? 2.2 : 1.8} />
+                <Icon size={16} strokeWidth={active ? 2.2 : 1.7} style={{ color: active ? 'var(--accent-teal)' : undefined }} />
                 <span className="flex-1">{label}</span>
-                {active && <ChevronRight size={14} className="text-teal/60" />}
+                {active && <ChevronRight size={13} style={{ color: 'rgba(14,165,233,0.5)' }} />}
               </Link>
             );
           })}
         </nav>
 
-        {/* IEC Badge */}
-        <div className="mx-4 mb-3 p-3 rounded-xl bg-gradient-to-r from-teal/[0.08] to-accent/[0.05] border border-white/[0.04]">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-teal/20 flex items-center justify-center">
-              <Bell size={12} className="text-teal" />
+        {/* Theme Toggle + IEC Badge */}
+        <div className="px-3 space-y-2 mb-3">
+          {/* Theme toggle */}
+          <button onClick={toggleTheme}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200"
+            style={{ background: 'var(--sidebar-hover)', color: 'var(--sidebar-text)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--sidebar-text)'; }}
+          >
+            {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+            <span className="text-[12px] font-medium">{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
+          </button>
+
+          {/* IEC Badge */}
+          <div className="p-3 rounded-xl" style={{ background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.1)' }}>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--accent-teal)' }} />
+              <p className="text-[11px] font-semibold" style={{ color: 'rgba(255,255,255,0.6)' }}>IEC 62304 Class C</p>
             </div>
-            <div>
-              <p className="text-[11px] font-semibold text-gray-300">IEC 62304 Class C</p>
-              <p className="text-[9px] text-gray-500">Highest Safety Classification</p>
-            </div>
+            <p className="text-[9px] ml-4" style={{ color: 'rgba(255,255,255,0.2)' }}>Monitoring active</p>
           </div>
         </div>
 
         {/* User */}
-        <div className="p-4 border-t border-white/[0.06]">
-          <div className="flex items-center gap-3 mb-3">
+        <div className="p-3" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
+          <div className="flex items-center gap-2.5">
             {profile?.picture ? (
-              <img src={profile.picture} alt="" className="w-9 h-9 rounded-xl object-cover ring-2 ring-white/10" />
+              <img src={profile.picture} alt="" className="w-8 h-8 rounded-lg object-cover" style={{ boxShadow: '0 0 0 1px rgba(255,255,255,0.1)' }} />
             ) : (
-              <div className="w-9 h-9 bg-gradient-to-br from-teal/20 to-accent/20 rounded-xl flex items-center justify-center ring-1 ring-white/10">
-                <User size={15} className="text-teal-light" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(14,165,233,0.1)' }}>
+                <User size={14} style={{ color: 'var(--accent-teal)' }} />
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-white truncate">{profile?.name || user.email}</p>
-              <p className="text-[10px] text-gray-500 font-medium">{ROLE_LABELS[profile?.role || 'viewer']}</p>
+              <p className="text-[12px] font-semibold text-white/80 truncate">{profile?.name || user.email}</p>
+              <p className="text-[10px]" style={{ color: 'var(--sidebar-text)' }}>{ROLES[profile?.role || 'viewer']}</p>
             </div>
+            <button onClick={logout}
+              className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200"
+              style={{ color: 'rgba(255,255,255,0.15)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.15)'; e.currentTarget.style.background = 'transparent'; }}
+            >
+              <LogOut size={13} />
+            </button>
           </div>
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 text-[11px] text-gray-500 hover:text-red-400 transition-all duration-200 w-full py-1.5 px-2 rounded-lg hover:bg-red-500/[0.06]"
-          >
-            <LogOut size={13} />
-            Sign Out
-          </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 ml-[260px] p-6 lg:p-8">
-        <div className="max-w-[1400px] mx-auto animate-fade-in">
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/forms" element={<FormsPage />} />
-            <Route path="/traceability" element={<TraceabilityPage />} />
-            <Route path="/audit" element={<AuditPage />} />
-            <Route path="/soup" element={<SOUPPage />} />
-            <Route path="/docsync" element={<DocSyncPage />} />
-            <Route path="/guide" element={<GuidePage />} />
-          </Routes>
+      {/* ─── Main Content ─── */}
+      <main className="flex-1 overflow-y-auto" style={{ background: 'var(--bg-secondary)' }}>
+        <div className="max-w-[1400px] mx-auto p-6 lg:p-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+            >
+              <Routes>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/forms" element={<FormsPage />} />
+                <Route path="/traceability" element={<TraceabilityPage />} />
+                <Route path="/audit" element={<AuditPage />} />
+                <Route path="/soup" element={<SOUPPage />} />
+                <Route path="/docsync" element={<DocSyncPage />} />
+                <Route path="/guide" element={<GuidePage />} />
+              </Routes>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
 
