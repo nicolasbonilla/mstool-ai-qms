@@ -35,13 +35,21 @@ def _warm_cache():
 async def lifespan(app):
     # Startup: warm cache in background thread so it doesn't block startup
     threading.Thread(target=_warm_cache, daemon=True).start()
-    # Start the in-process scheduler (hourly snapshot, daily sentinel, etc.)
-    from app.core.scheduler import start_scheduler, shutdown_scheduler
-    start_scheduler()
-    try:
+
+    # IMPORTANT: in-process APScheduler is INTENTIONALLY DISABLED.
+    # We migrated to Cloud Scheduler hitting /api/v1/cron/* endpoints so
+    # Cloud Run can scale to zero (huge cost saver). Set
+    # ENABLE_INPROC_SCHEDULER=1 to opt back in for local development only.
+    import os
+    if os.environ.get("ENABLE_INPROC_SCHEDULER") == "1":
+        from app.core.scheduler import start_scheduler, shutdown_scheduler
+        start_scheduler()
+        try:
+            yield
+        finally:
+            shutdown_scheduler()
+    else:
         yield
-    finally:
-        shutdown_scheduler()
 
 
 import logging
@@ -86,7 +94,7 @@ app.add_middleware(AuditTrailMiddleware)
 # Routes
 from app.api.routes import (
     compliance, forms, users, traceability, audit, soup, ai,
-    system, activity, baselines, predict, webhooks, mcp,
+    system, activity, baselines, predict, webhooks, mcp, cron,
     agents as agents_route,
 )
 
@@ -104,6 +112,7 @@ app.include_router(agents_route.router, prefix=settings.API_V1_STR)
 app.include_router(predict.router, prefix=settings.API_V1_STR)
 app.include_router(webhooks.router, prefix=settings.API_V1_STR)
 app.include_router(mcp.router, prefix=settings.API_V1_STR)
+app.include_router(cron.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/", tags=["Health"])

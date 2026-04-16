@@ -33,17 +33,23 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--memory'
-      - '1Gi'
+      - '512Mi'
       - '--cpu'
       - '1'
+      # CPU is allocated only during request handling (not idle). With
+      # min-instances=0 + this flag, idle Cloud Run is essentially $0.
+      - '--no-cpu-throttling=false'
       - '--max-instances'
       - '3'
-      # min-instances=1 keeps APScheduler alive overnight so the hourly
-      # snapshot, daily SOUP scan, and weekly drift canary actually run
-      # even if no human opens the app. Cost: ~$10/month vs unbounded
-      # reliability win.
+      # SCALE TO ZERO. Cloud Scheduler hits /api/v1/cron/* endpoints to
+      # wake the service when needed. APScheduler is INTENTIONALLY OFF
+      # in production so we don't need a 24/7 instance. Net savings:
+      # ~$45/month vs min-instances=1.
       - '--min-instances'
-      - '1'
+      - '0'
+      # Slightly higher concurrency saves on per-request CPU billing.
+      - '--concurrency'
+      - '40'
       # IMPORTANT: --update-env-vars preserves any env vars set out-of-band
       # (e.g. ANTHROPIC_API_KEY configured via `gcloud run services update`),
       # which --set-env-vars would silently delete. Bug we shipped twice

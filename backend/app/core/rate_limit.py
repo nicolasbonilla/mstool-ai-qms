@@ -40,9 +40,17 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-RATE_LIMIT_AGENT_PER_MIN = os.environ.get("RATE_LIMIT_AGENT_PER_MIN", "10/minute")
-MAX_CLAUDE_CALLS_PER_HOUR = int(os.environ.get("MAX_CLAUDE_CALLS_PER_HOUR", "100"))
-MAX_AGENT_CALLS_PER_USER_DAY = int(os.environ.get("MAX_AGENT_CALLS_PER_USER_DAY", "80"))
+# Tightened defaults for cost protection — Anthropic API can burn $$$
+# if a user spams agent invocations. These caps keep worst-case budget
+# bounded:
+#   max 5/min/user × 60 min × 24h × 30 days × $0.005 avg/call ≈ $1080/mo
+# But the daily cap keeps it to:
+#   30 calls/user/day × N users × $0.005 ≈ $4.50/user/month
+# And global hourly cap means the team CANNOT exceed:
+#   50/hour × 24h × 30 days × $0.005 ≈ $180/month worst case
+RATE_LIMIT_AGENT_PER_MIN = os.environ.get("RATE_LIMIT_AGENT_PER_MIN", "5/minute")
+MAX_CLAUDE_CALLS_PER_HOUR = int(os.environ.get("MAX_CLAUDE_CALLS_PER_HOUR", "50"))
+MAX_AGENT_CALLS_PER_USER_DAY = int(os.environ.get("MAX_AGENT_CALLS_PER_USER_DAY", "30"))
 
 
 def _user_key(request: Request) -> str:

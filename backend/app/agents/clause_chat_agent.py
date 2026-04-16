@@ -23,7 +23,10 @@ from app.agents.base_agent import BaseAgent, AgentResult, Citation, get_anthropi
 class ClauseChatAgent(BaseAgent):
     name = "clause_chat"
     description = "Answers compliance questions with citations to commits/forms/clauses"
-    tier = "sonnet"
+    # Downgraded from sonnet → haiku because Skills now provide most of
+    # the context heavy lifting; Haiku handles cited Q&A well at ~5x lower
+    # cost. If a user reports degraded answers, bump back to sonnet.
+    tier = "haiku"
     default_requires_signoff = False  # informational chat
     system_prompt = (
         "You are the Clause Chat Agent for MSTool-AI-QMS. The user asks a "

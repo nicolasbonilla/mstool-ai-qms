@@ -395,6 +395,105 @@ class FirestoreService:
         })
         return doc_ref.get().to_dict()
 
+    # ─── Cost saver sweep (daily) ───────────────────────────────────
+    #
+    # Firestore is billed per-doc reads + storage. Two collections grow
+    # without bound: qms_score_history (24/day) and qms_audit_trail (~hundreds
+    # per active day). Without housekeeping, both inflate read costs.
+    #
+    # Strategy:
+    # - Score history: collapse hourly snapshots older than 7 days into
+    #   one daily-average doc, then delete the hourly originals.
+    # - Audit trail: archive entries older than 90 days into BigQuery if
+    #   configured, otherwise leave them (we never delete audit trail on
+    #   our own — that's a regulatory choice).
+    # - Rate-limit counters: delete buckets older than 7 days (they're
+    #   purely operational, no audit value).
+
+    @staticmethod
+    def cost_saver_sweep() -> dict:
+        """Daily housekeeping. Returns counts for visibility."""
+        from datetime import timedelta
+        db = FirestoreService._db()
+        now = datetime.now(timezone.utc)
+        report = {
+            "ran_at": now.isoformat(),
+            "score_history_collapsed": 0,
+            "score_history_deleted": 0,
+            "rate_limit_buckets_deleted": 0,
+        }
+
+        # 1) Collapse hourly score snapshots older than 7 days into daily avgs
+        cutoff = (now - timedelta(days=7)).strftime("%Y-%m-%dT%H")
+        try:
+            buckets_by_day: Dict[str, list] = {}
+            for doc in db.collection(Collections.SCORE_HISTORY).stream():
+                bid = doc.id
+                if bid >= cutoff:
+                    continue
+                data = doc.to_dict() or {}
+                if data.get("granularity") != "hour":
+                    continue
+                day = bid[:10]
+                buckets_by_day.setdefault(day, []).append((doc.id, data))
+
+            for day, items in buckets_by_day.items():
+                if not items:
+                    continue
+                # Compute average across all snapshots of the day
+                scores_acc: Dict[str, list] = {}
+                breakdown_acc: Dict[str, list] = {}
+                for _, d in items:
+                    for k, v in (d.get("scores") or {}).items():
+                        scores_acc.setdefault(k, []).append(float(v or 0))
+                    for k, v in (d.get("breakdown") or {}).items():
+                        breakdown_acc.setdefault(k, []).append(float(v or 0))
+
+                avg_scores = {k: round(sum(vs) / len(vs), 2) for k, vs in scores_acc.items()}
+                avg_breakdown = {k: round(sum(vs) / len(vs), 2) for k, vs in breakdown_acc.items()}
+
+                day_doc_id = day  # YYYY-MM-DD format
+                db.collection(Collections.SCORE_HISTORY).document(day_doc_id).set({
+                    "bucket_id": day_doc_id,
+                    "granularity": "day",
+                    "timestamp": (now - timedelta(days=(now.date() - datetime.fromisoformat(day + "T00:00:00+00:00").date()).days)).isoformat(),
+                    "date": day,
+                    "scores": avg_scores,
+                    "breakdown": avg_breakdown,
+                    "collapsed_from_hours": len(items),
+                })
+                report["score_history_collapsed"] += 1
+
+                for doc_id, _ in items:
+                    db.collection(Collections.SCORE_HISTORY).document(doc_id).delete()
+                    report["score_history_deleted"] += 1
+        except Exception as e:
+            logger.warning(f"score_history collapse failed: {e}")
+
+        # 2) Drop old rate-limit buckets (purely ops, no audit value)
+        try:
+            ratelimit_root = (
+                db.collection(Collections.SETTINGS).document("rate_limits")
+            )
+            # Daily user buckets are sub-collections named user_daily_YYYY-MM-DD
+            cutoff_day = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+            for sub in ratelimit_root.collections():
+                name = sub.id
+                if name.startswith("user_daily_") and name.replace("user_daily_", "") < cutoff_day:
+                    for d in sub.stream():
+                        d.reference.delete()
+                        report["rate_limit_buckets_deleted"] += 1
+            # Global hourly buckets
+            cutoff_hour = (now - timedelta(days=7)).strftime("%Y-%m-%dT%H")
+            for d in ratelimit_root.collection("global_hourly").stream():
+                if d.id < cutoff_hour:
+                    d.reference.delete()
+                    report["rate_limit_buckets_deleted"] += 1
+        except Exception as e:
+            logger.warning(f"rate-limit prune failed: {e}")
+
+        return report
+
     # ─── User Profiles ───
 
     @staticmethod
