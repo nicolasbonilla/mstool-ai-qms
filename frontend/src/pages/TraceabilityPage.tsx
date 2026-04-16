@@ -140,7 +140,7 @@ export default function TraceabilityPage() {
 
   const filteredRtm = useMemo(() => {
     if (!data) return [];
-    return data.rtm_rows.filter(r => {
+    return (data.rtm_rows || []).filter(r => {
       if (matrixFilter !== 'all' && r.status !== matrixFilter) return false;
       if (matrixCategoryFilter && r.category !== matrixCategoryFilter) return false;
       return true;
@@ -151,18 +151,32 @@ export default function TraceabilityPage() {
   if (error) return <div className="rounded-2xl p-6" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}><p style={{ color: '#EF4444' }}>{error}</p></div>;
   if (!data) return null;
 
-  const cov = data.coverage_metrics;
+  // Defensive defaults — backend may return partial structure during cold-start
+  // or if a service inside build_graph() throws. Never let an undefined field
+  // crash the whole page; degrade gracefully so user sees something useful.
+  const cov: CoverageMetrics = data.coverage_metrics || {
+    forward_pct: 0, backward_pct: 0, risk_coverage_pct: 0, code_coverage_pct: 0,
+    tests_with_reqs: 0, tests_total: 0, reqs_with_tests: 0, reqs_total: 0,
+    audit_readiness: 'not_ready',
+  };
+  const orphansSafe = {
+    requirements_without_tests: data.orphans?.requirements_without_tests || [],
+    risk_controls_without_verification: data.orphans?.risk_controls_without_verification || [],
+    code_without_requirements: data.orphans?.code_without_requirements || [],
+  };
   const totalOrphans =
-    data.orphans.requirements_without_tests.length +
-    data.orphans.risk_controls_without_verification.length +
-    data.orphans.code_without_requirements.length;
+    orphansSafe.requirements_without_tests.length +
+    orphansSafe.risk_controls_without_verification.length +
+    orphansSafe.code_without_requirements.length;
 
-  // Audit readiness verdict
-  const verdictConfig = {
+  // Audit readiness verdict — fall back to "not_ready" if the backend sends
+  // an unexpected value (e.g. older deployment without the field).
+  const VERDICTS = {
     ready:      { color: '#10B981', label: 'Audit Ready',     desc: 'Bidirectional coverage meets IEC 62304 §5.1.1 thresholds' },
     needs_work: { color: '#F59E0B', label: 'Needs Work',      desc: 'Coverage acceptable but gaps will be flagged by auditor' },
     not_ready:  { color: '#EF4444', label: 'Not Audit Ready', desc: 'Significant traceability gaps — fix before submission' },
-  }[cov.audit_readiness];
+  } as const;
+  const verdictConfig = VERDICTS[cov.audit_readiness as keyof typeof VERDICTS] || VERDICTS.not_ready;
 
   return (
     <div className="space-y-6">
@@ -229,7 +243,7 @@ export default function TraceabilityPage() {
       <div>
         <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>Coverage by Requirement Category</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {Object.entries(data.coverage_by_category).map(([cat, c]) => {
+          {Object.entries(data.coverage_by_category || {}).map(([cat, c]) => {
             const meta = CATEGORY_LABELS[cat] || { name: cat, color: '#94A3B8', desc: '' };
             const pct = c.total > 0 ? Math.round((c.with_tests / c.total) * 100) : 0;
             const isWeak = pct < 70 && c.total > 0;
@@ -302,7 +316,7 @@ export default function TraceabilityPage() {
             <span className="text-[10px] font-bold uppercase tracking-wider mr-1" style={{ color: 'var(--text-muted)' }}>Filter:</span>
             {(['all', 'complete', 'partial', 'uncovered'] as const).map(f => {
               const cfg = f !== 'all' ? STATUS_CONFIG[f] : null;
-              const count = f === 'all' ? data.rtm_rows.length : data.rtm_rows.filter(r => r.status === f).length;
+              const count = f === 'all' ? (data.rtm_rows || []).length : (data.rtm_rows || []).filter(r => r.status === f).length;
               return (
                 <button key={f} onClick={() => setMatrixFilter(f)}
                   className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-semibold rounded-lg transition-all"
@@ -326,7 +340,7 @@ export default function TraceabilityPage() {
                 </button>
               </>
             )}
-            <span className="ml-auto text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{filteredRtm.length} of {data.rtm_rows.length} requirements</span>
+            <span className="ml-auto text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{filteredRtm.length} of {(data.rtm_rows || []).length} requirements</span>
           </div>
 
           {/* Table */}
@@ -392,7 +406,7 @@ export default function TraceabilityPage() {
         <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)', height: 520 }}>
           <div className="flex items-center gap-3 p-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
             {Object.entries(TYPE_COLORS).map(([type, color]) => {
-              const count = data.nodes.filter(n => n.type === type).length;
+              const count = (data.nodes || []).filter(n => n.type === type).length;
               return (
                 <span key={type} className="flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: 'var(--text-muted)' }}>
                   <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
@@ -401,14 +415,14 @@ export default function TraceabilityPage() {
               );
             })}
             <span className="ml-auto text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
-              {data.stats.total_nodes} nodes · {data.stats.total_edges} edges
+              {data.stats?.total_nodes ?? 0} nodes · {data.stats?.total_edges ?? 0} edges
             </span>
           </div>
           <div style={{ height: 'calc(100% - 49px)' }}>
             <ReactFlow nodes={rfNodes} edges={rfEdges} onNodeClick={onNodeClick} fitView
               minZoom={0.2} maxZoom={2} defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}>
               <Controls />
-              <MiniMap nodeColor={(n) => TYPE_COLORS[data.nodes.find(dn => dn.id === n.id)?.type || 'code'] || '#94A3B8'} />
+              <MiniMap nodeColor={(n) => TYPE_COLORS[(data.nodes || []).find(dn => dn.id === n.id)?.type || 'code'] || '#94A3B8'} />
               <Background />
             </ReactFlow>
           </div>
@@ -426,20 +440,20 @@ export default function TraceabilityPage() {
           </p>
 
           {/* REQs without tests */}
-          {data.orphans.requirements_without_tests.length > 0 && (
+          {orphansSafe.requirements_without_tests.length > 0 && (
             <div className="rounded-2xl overflow-hidden"
               style={{ background: 'var(--card-bg)', border: '1px solid rgba(239,68,68,0.20)', boxShadow: '0 4px 20px rgba(239,68,68,0.06)' }}>
               <div className="px-4 py-3 flex items-center gap-3" style={{ background: 'rgba(239,68,68,0.05)', borderBottom: '1px solid rgba(239,68,68,0.15)' }}>
                 <AlertTriangle size={14} style={{ color: '#EF4444' }} />
                 <div className="flex-1">
                   <span className="text-[12px] font-bold" style={{ color: '#EF4444' }}>
-                    Requirements Without Test Verification ({data.orphans.requirements_without_tests.length})
+                    Requirements Without Test Verification ({orphansSafe.requirements_without_tests.length})
                   </span>
                   <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>IEC 62304 §5.5 + §5.6 — every requirement must have ≥1 verification record</p>
                 </div>
               </div>
               <div className="divide-y" style={{ borderColor: 'var(--border-subtle)' }}>
-                {data.orphans.requirements_without_tests.slice(0, 6).map(o => (
+                {orphansSafe.requirements_without_tests.slice(0, 6).map(o => (
                   <div key={o.id} className="px-4 py-3 flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -470,9 +484,9 @@ export default function TraceabilityPage() {
                     </Link>
                   </div>
                 ))}
-                {data.orphans.requirements_without_tests.length > 6 && (
+                {orphansSafe.requirements_without_tests.length > 6 && (
                   <div className="px-4 py-2.5 text-[10px] font-semibold text-center" style={{ color: 'var(--text-muted)' }}>
-                    + {data.orphans.requirements_without_tests.length - 6} more — see Matrix RTM (filter: Uncovered)
+                    + {orphansSafe.requirements_without_tests.length - 6} more — see Matrix RTM (filter: Uncovered)
                   </div>
                 )}
               </div>
