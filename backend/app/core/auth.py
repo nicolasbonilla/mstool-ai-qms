@@ -62,3 +62,10 @@ def require_editor(user: CurrentUser = Depends(get_current_user)) -> CurrentUser
     if user.role == "viewer":
         raise HTTPException(status_code=403, detail="Viewer role cannot edit")
     return user
+
+
+def require_admin(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    """Require admin role — used for ledger verification and system ops."""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+    return user

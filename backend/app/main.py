@@ -59,8 +59,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# WORM audit-trail middleware — records every mutation into the hash-chained
+# ledger (21 CFR Part 11 §11.10(e)). Must come AFTER CORS so CORS preflight
+# OPTIONS responses aren't logged.
+from app.core.audit_middleware import AuditTrailMiddleware
+app.add_middleware(AuditTrailMiddleware)
+
 # Routes
-from app.api.routes import compliance, forms, users, traceability, audit, soup, ai
+from app.api.routes import compliance, forms, users, traceability, audit, soup, ai, system, activity
 
 app.include_router(compliance.router, prefix=settings.API_V1_STR)
 app.include_router(forms.router, prefix=settings.API_V1_STR)
@@ -69,6 +75,8 @@ app.include_router(traceability.router, prefix=settings.API_V1_STR)
 app.include_router(audit.router, prefix=settings.API_V1_STR)
 app.include_router(soup.router, prefix=settings.API_V1_STR)
 app.include_router(ai.router, prefix=settings.API_V1_STR)
+app.include_router(system.router, prefix=settings.API_V1_STR)
+app.include_router(activity.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/", tags=["Health"])

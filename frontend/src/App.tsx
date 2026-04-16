@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard, FileText, GitBranch, ShieldCheck,
   Package, RefreshCw, LogOut, User, BookOpen,
-  Sun, Moon, ChevronRight,
+  Sun, Moon, ChevronRight, Activity, TrendingUp,
 } from 'lucide-react';
 import { useAuthStore } from './store/useAuthStore';
 import { useThemeStore } from './store/useThemeStore';
@@ -16,6 +16,8 @@ import AuditPage from './pages/AuditPage';
 import SOUPPage from './pages/SOUPPage';
 import DocSyncPage from './pages/DocSyncPage';
 import GuidePage from './pages/GuidePage';
+import ActivityPage from './pages/ActivityPage';
+import TrendsPage from './pages/TrendsPage';
 import AIAssistant from './components/AIAssistant';
 
 const NAV_SECTIONS = [
@@ -23,6 +25,8 @@ const NAV_SECTIONS = [
     label: 'Overview',
     items: [
       { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/trends', label: 'Trends', icon: TrendingUp },
+      { path: '/activity', label: 'Activity', icon: Activity },
     ],
   },
   {
@@ -174,6 +178,8 @@ export default function App() {
             >
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
+                <Route path="/trends" element={<TrendsPage />} />
+                <Route path="/activity" element={<ActivityPage />} />
                 <Route path="/forms" element={<FormsPage />} />
                 <Route path="/traceability" element={<TraceabilityPage />} />
                 <Route path="/audit" element={<AuditPage />} />
