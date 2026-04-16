@@ -17,18 +17,25 @@ def _get_service():
     return ComplianceService()
 
 
+def _snapshot_from_full_score(result: dict) -> None:
+    """Persist a per-hour snapshot. Idempotent within the hour bucket."""
+    try:
+        from app.services.firestore_service import FirestoreService
+        FirestoreService.store_score_snapshot(
+            result["scores"], result["breakdown"], granularity="hour"
+        )
+    except Exception:
+        # Snapshot must never block the hot dashboard path.
+        pass
+
+
 @router.get("/score")
 async def get_compliance_score(user: CurrentUser = Depends(get_current_user)):
     """Compute and return real-time compliance score with breakdown."""
     try:
         service = _get_service()
         result = service.compute_full_score()
-        # Store snapshot for trend tracking
-        try:
-            from app.services.firestore_service import FirestoreService
-            FirestoreService.store_score_snapshot(result["scores"], result["breakdown"])
-        except Exception:
-            pass  # Non-critical — don't fail score computation
+        _snapshot_from_full_score(result)
         return result
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
@@ -36,10 +43,27 @@ async def get_compliance_score(user: CurrentUser = Depends(get_current_user)):
 
 @router.get("/score-detailed")
 async def get_detailed_compliance_score(user: CurrentUser = Depends(get_current_user)):
-    """Compute compliance score with full evidence per check — for dashboard."""
+    """Compute compliance score with full evidence per check — for dashboard.
+
+    Side effect: also persists a per-hour snapshot so the Dashboard charts
+    populate from the very first time anyone opens the page (without
+    waiting for the APScheduler hourly tick).
+    """
     try:
         service = _get_service()
-        return service.compute_detailed_score()
+        result = service.compute_detailed_score()
+        # The detailed endpoint shape carries `scores` and a list of `checks`.
+        # Convert checks → breakdown dict for the snapshot store.
+        try:
+            breakdown = {c["id"]: c["score"] for c in result.get("checks", [])
+                          if isinstance(c, dict) and "id" in c}
+            from app.services.firestore_service import FirestoreService
+            FirestoreService.store_score_snapshot(
+                result.get("scores", {}), breakdown, granularity="hour"
+            )
+        except Exception:
+            pass
+        return result
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
 

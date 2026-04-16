@@ -261,9 +261,9 @@ export default function DashboardPage() {
                 <span className="text-[14px] font-bold" style={{ color: 'var(--text-muted)' }}>%</span>
               </div>
               <div className="text-[9px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                Live · {scoreSparkline.length > 1 ? `${scoreSparkline.length} pts (30d)` : 'building history…'}
+                Live · {scoreSparkline.length > 0 ? `${scoreSparkline.length} pt${scoreSparkline.length === 1 ? '' : 's'} (30d)` : 'building history…'}
               </div>
-              {scoreSparkline.length > 1 && (
+              {scoreSparkline.length > 0 && (
                 <div style={{ height: 28, marginTop: 4 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={scoreSparkline}>
@@ -399,7 +399,22 @@ export default function DashboardPage() {
           - Jama Trace Scores trend lines + MasterControl Insights
           - DORA 2025 reliability metrics (time-series KPIs)
           ═══════════════════════════════════════════════ */}
-      {trendChartData.length > 1 && (
+      {trendChartData.length === 0 && (
+        <div className="rounded-2xl p-5 text-center"
+          style={{ background: 'var(--card-bg)', border: '1px dashed var(--border-default)' }}>
+          <Activity size={20} className="mx-auto mb-1.5" style={{ color: 'var(--text-muted)' }} />
+          <p className="text-[12px] font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Charts will appear shortly
+          </p>
+          <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            Snapshots are captured automatically. The first one was just queued —
+            refresh in a moment to see your live trend chart, CI history, breakdown radial,
+            and activity heatmap populate here.
+          </p>
+        </div>
+      )}
+
+      {trendChartData.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Main trend chart — 4 lines, large */}
           <div className="lg:col-span-2 rounded-2xl p-4"
@@ -562,7 +577,7 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Per-area sparkline */}
-                  {scoreHistory.length > 1 && (
+                  {scoreHistory.length > 0 && (
                     <div style={{ width: 80, height: 28 }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={scoreHistory.map((s: any) => ({ v: s.scores?.[area.id === 'lifecycle' ? 'iec62304' : area.id === 'quality' ? 'iso13485' : 'cybersecurity'] ?? 0 }))}>
