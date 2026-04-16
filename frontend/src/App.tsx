@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard, FileText, GitBranch, ShieldCheck,
   Package, RefreshCw, LogOut, User, BookOpen,
-  Sun, Moon, ChevronRight, Activity, TrendingUp,
+  Sun, Moon, ChevronRight, Activity, TrendingUp, Tag, Sparkles, Brain,
 } from 'lucide-react';
 import { useAuthStore } from './store/useAuthStore';
 import { useThemeStore } from './store/useThemeStore';
@@ -18,6 +18,9 @@ import DocSyncPage from './pages/DocSyncPage';
 import GuidePage from './pages/GuidePage';
 import ActivityPage from './pages/ActivityPage';
 import TrendsPage from './pages/TrendsPage';
+import ReleasesPage from './pages/ReleasesPage';
+import AgentsPage from './pages/AgentsPage';
+import InsightsPage from './pages/InsightsPage';
 import AIAssistant from './components/AIAssistant';
 
 const NAV_SECTIONS = [
@@ -34,6 +37,7 @@ const NAV_SECTIONS = [
     items: [
       { path: '/forms', label: 'Forms', icon: FileText },
       { path: '/audit', label: 'Audit', icon: ShieldCheck },
+      { path: '/releases', label: 'Releases', icon: Tag },
     ],
   },
   {
@@ -42,6 +46,13 @@ const NAV_SECTIONS = [
       { path: '/traceability', label: 'Traceability', icon: GitBranch },
       { path: '/soup', label: 'SOUP', icon: Package },
       { path: '/docsync', label: 'Doc Sync', icon: RefreshCw },
+    ],
+  },
+  {
+    label: 'AI',
+    items: [
+      { path: '/agents', label: 'Agents', icon: Sparkles },
+      { path: '/insights', label: 'Insights', icon: Brain },
     ],
   },
   {
@@ -180,6 +191,9 @@ export default function App() {
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/trends" element={<TrendsPage />} />
                 <Route path="/activity" element={<ActivityPage />} />
+                <Route path="/releases" element={<ReleasesPage />} />
+                <Route path="/agents" element={<AgentsPage />} />
+                <Route path="/insights" element={<InsightsPage />} />
                 <Route path="/forms" element={<FormsPage />} />
                 <Route path="/traceability" element={<TraceabilityPage />} />
                 <Route path="/audit" element={<AuditPage />} />

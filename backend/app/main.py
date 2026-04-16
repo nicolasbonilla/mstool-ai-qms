@@ -66,7 +66,11 @@ from app.core.audit_middleware import AuditTrailMiddleware
 app.add_middleware(AuditTrailMiddleware)
 
 # Routes
-from app.api.routes import compliance, forms, users, traceability, audit, soup, ai, system, activity
+from app.api.routes import (
+    compliance, forms, users, traceability, audit, soup, ai,
+    system, activity, baselines, predict,
+    agents as agents_route,
+)
 
 app.include_router(compliance.router, prefix=settings.API_V1_STR)
 app.include_router(forms.router, prefix=settings.API_V1_STR)
@@ -77,6 +81,9 @@ app.include_router(soup.router, prefix=settings.API_V1_STR)
 app.include_router(ai.router, prefix=settings.API_V1_STR)
 app.include_router(system.router, prefix=settings.API_V1_STR)
 app.include_router(activity.router, prefix=settings.API_V1_STR)
+app.include_router(baselines.router, prefix=settings.API_V1_STR)
+app.include_router(agents_route.router, prefix=settings.API_V1_STR)
+app.include_router(predict.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/", tags=["Health"])
