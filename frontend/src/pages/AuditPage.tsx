@@ -3,9 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, GitCommit, FileText, Download, CheckCircle2,
   AlertTriangle, XCircle, Clock, ChevronRight,
-  Play, ArrowRight,
+  Play, ArrowRight, Activity, Info,
 } from 'lucide-react';
 import { getAuditPlan, runAudit, exportAuditPDF, getAuditHistory } from '../api/audit';
+import { getComplianceScore } from '../api/compliance';
+import ScoringMethodology from '../components/ui/ScoringMethodology';
+
+/* ─── Per-verdict rule explanations (how strong/adequate/weak/missing is decided) ─── */
+const VERDICT_RULES: Record<string, string> = {
+  strong: 'All required evidence present: document exists, required IDs/sections found, data linked. An auditor would accept without follow-up questions.',
+  adequate: 'Most evidence present but with 1 gap. Document exists but is missing a sub-section, or evidence is partial. Auditor will likely ask clarifying questions.',
+  weak: 'Minimal evidence. Document exists but incomplete, OR required evidence is present in code but not in the expected document location. Auditor will flag as a finding.',
+  missing: 'No evidence found. Required document does not exist, or no traceable references found. Immediate audit failure on this clause.',
+};
 
 /* ─── Types ─── */
 interface ClausePlan { clause: string; title: string; group: string; description: string; what_auditor_looks_for: string; where_we_check: string; class_c_note: string; form_if_fails: string; checks: string[] }
@@ -31,14 +41,17 @@ export default function AuditPage() {
   const [plan, setPlan] = useState<ClausePlan[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [result, setResult] = useState<AuditResult | null>(null);
+  const [healthScore, setHealthScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedClause, setExpandedClause] = useState<string | null>(null);
   const [expandedPlanClause, setExpandedPlanClause] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [showMethodology, setShowMethodology] = useState(false);
 
   useEffect(() => {
     getAuditPlan().then(r => setPlan(r.data.clauses || [])).catch(() => {});
     getAuditHistory(5).then(r => setHistory(r.data.history || [])).catch(() => {});
+    getComplianceScore().then(r => setHealthScore(r.data.scores?.ce_mark_overall ?? null)).catch(() => {});
   }, []);
 
   const handleRun = async (mode: string) => {
@@ -79,61 +92,159 @@ export default function AuditPage() {
 
   return (
     <div className="space-y-5">
-      {/* ═══ STATUS BANNER ═══ */}
-      <div className="rounded-2xl p-5 flex items-center justify-between"
+      {/* ═══════════════════════════════════════════════
+          DUAL-SCORE STATUS BANNER
+          Shows Audit Verdict (this page) + Health Score (Dashboard)
+          side-by-side with methodology explainer
+          ═══════════════════════════════════════════════ */}
+      <div className="rounded-2xl p-5"
         style={{
           background: result
             ? result.readiness_score >= 90 ? 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))' : 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03))'
-            : 'linear-gradient(135deg, rgba(14,165,233,0.08), rgba(14,165,233,0.03))',
-          border: `1px solid ${result ? (result.readiness_score >= 90 ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)') : 'rgba(14,165,233,0.15)'}`,
+            : 'linear-gradient(135deg, rgba(139,92,246,0.08), rgba(139,92,246,0.03))',
+          border: `1px solid ${result ? (result.readiness_score >= 90 ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)') : 'rgba(139,92,246,0.15)'}`,
         }}>
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{ background: result ? (result.readiness_score >= 90 ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)') : 'rgba(14,165,233,0.12)' }}>
-            {result ? (result.readiness_score >= 90 ? <CheckCircle2 size={24} style={{ color: '#10B981' }} /> : <AlertTriangle size={24} style={{ color: '#F59E0B' }} />) : <ShieldCheck size={24} style={{ color: '#0EA5E9' }} />}
-          </div>
-          <div>
-            {result ? (
-              <>
-                <div className="flex items-center gap-3">
-                  <span className="text-[28px] font-extrabold tracking-tight" style={{ color: 'var(--text-primary)' }}>{result.readiness_score}%</span>
-                  <span className="text-[14px] font-bold" style={{ color: result.readiness_score >= 95 ? '#10B981' : '#F59E0B' }}>
-                    {result.readiness_score >= 95 ? 'Audit Ready' : result.readiness_score >= 80 ? 'Mostly Ready' : 'Not Ready'}
-                  </span>
-                  <span className="text-[11px] font-mono px-2 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>target: ≥95%</span>
-                </div>
-                <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {result.summary.strong} strong · {result.summary.adequate} adequate · {result.summary.weak + result.summary.missing} gaps
-                </p>
-              </>
-            ) : (
-              <>
-                <span className="text-[18px] font-bold" style={{ color: 'var(--text-primary)' }}>IEC 62304 Audit Simulator</span>
-                <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  Simulates a Notified Body audit — checks {plan.length} clauses against real repository evidence
-                </p>
-                {lastScore !== undefined && daysSinceAudit !== null && (
-                  <p className="text-[11px] mt-1 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-                    <span>Last audit: <strong style={{ color: lastScore >= 90 ? '#10B981' : '#F59E0B' }}>{lastScore}%</strong></span>
-                    <span>· {daysSinceAudit === 0 ? 'today' : `${daysSinceAudit} day${daysSinceAudit > 1 ? 's' : ''} ago`}</span>
-                    {daysSinceAudit > 7 && <span style={{ color: '#F59E0B' }}>— recommend re-running</span>}
+        <div className="flex items-center justify-between gap-6 flex-wrap">
+          {/* Left: icon + title */}
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ background: result ? (result.readiness_score >= 90 ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)') : 'rgba(139,92,246,0.12)' }}>
+              {result ? (result.readiness_score >= 90 ? <CheckCircle2 size={24} style={{ color: '#10B981' }} /> : <AlertTriangle size={24} style={{ color: '#F59E0B' }} />) : <ShieldCheck size={24} style={{ color: '#8B5CF6' }} />}
+            </div>
+            <div>
+              {result ? (
+                <>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-[18px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                      {result.readiness_score >= 95 ? 'Audit Ready' : result.readiness_score >= 80 ? 'Mostly Ready' : 'Not Ready'}
+                    </span>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>target: ≥95%</span>
+                  </div>
+                  <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    <span style={{ color: '#10B981' }}>{result.summary.strong} strong</span> · <span style={{ color: '#F59E0B' }}>{result.summary.adequate} adequate</span> · <span style={{ color: '#F97316' }}>{result.summary.weak} weak</span> · <span style={{ color: '#EF4444' }}>{result.summary.missing} missing</span> ·{' '}
+                    <button onClick={() => setShowMethodology(true)} className="font-semibold underline" style={{ color: 'var(--accent-teal)' }}>see methodology</button>
                   </p>
-                )}
-              </>
-            )}
+                </>
+              ) : (
+                <>
+                  <span className="text-[18px] font-bold" style={{ color: 'var(--text-primary)' }}>IEC 62304 Audit Simulator</span>
+                  <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Discrete auditor verdict on {plan.length} clauses: <span style={{ color: '#10B981' }}>strong</span> / <span style={{ color: '#F59E0B' }}>adequate</span> / <span style={{ color: '#F97316' }}>weak</span> / <span style={{ color: '#EF4444' }}>missing</span> · <button onClick={() => setShowMethodology(true)} className="font-semibold underline" style={{ color: 'var(--accent-teal)' }}>see methodology</button>
+                  </p>
+                  {lastScore !== undefined && daysSinceAudit !== null && (
+                    <p className="text-[11px] mt-1 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+                      <span>Last audit: <strong style={{ color: lastScore >= 90 ? '#10B981' : '#F59E0B' }}>{lastScore}%</strong></span>
+                      <span>· {daysSinceAudit === 0 ? 'today' : `${daysSinceAudit} day${daysSinceAudit > 1 ? 's' : ''} ago`}</span>
+                      {daysSinceAudit > 7 && <span style={{ color: '#F59E0B' }}>— recommend re-running</span>}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Right: dual scores + actions */}
+          <div className="flex items-stretch gap-3">
+            {/* Audit Verdict (primary here) */}
+            <div className="rounded-xl px-4 py-2.5 min-w-[140px]"
+              style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.20)' }}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <ShieldCheck size={10} style={{ color: '#8B5CF6' }} />
+                <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: '#8B5CF6' }}>Audit Verdict</span>
+              </div>
+              {result ? (
+                <>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-[26px] font-extrabold tabular-nums leading-none" style={{ color: 'var(--text-primary)' }}>{result.readiness_score}</span>
+                    <span className="text-[14px] font-bold" style={{ color: 'var(--text-muted)' }}>%</span>
+                  </div>
+                  <div className="text-[9px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Just now</div>
+                </>
+              ) : lastScore !== undefined ? (
+                <>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-[26px] font-extrabold tabular-nums leading-none" style={{ color: 'var(--text-primary)' }}>{lastScore}</span>
+                    <span className="text-[14px] font-bold" style={{ color: 'var(--text-muted)' }}>%</span>
+                  </div>
+                  <div className="text-[9px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    {daysSinceAudit === 0 ? 'today' : `${daysSinceAudit}d ago`}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-[16px] font-bold" style={{ color: 'var(--text-muted)' }}>—</div>
+                  <div className="text-[9px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Run audit →</div>
+                </>
+              )}
+            </div>
+
+            {/* Health Score (cross-reference to Dashboard) */}
+            <div className="rounded-xl px-4 py-2.5 min-w-[140px] cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => navigate('/dashboard')}
+              style={{ background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.20)' }}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Activity size={10} style={{ color: '#0EA5E9' }} />
+                <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: '#0EA5E9' }}>Health Score</span>
+              </div>
+              {healthScore !== null ? (
+                <>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-[26px] font-extrabold tabular-nums leading-none" style={{ color: 'var(--text-primary)' }}>{healthScore}</span>
+                    <span className="text-[14px] font-bold" style={{ color: 'var(--text-muted)' }}>%</span>
+                  </div>
+                  <div className="text-[9px] mt-0.5" style={{ color: 'var(--text-muted)' }}>From Dashboard →</div>
+                </>
+              ) : (
+                <div className="text-[16px] font-bold" style={{ color: 'var(--text-muted)' }}>—</div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-1.5 justify-center">
+              <button onClick={() => setShowMethodology(true)}
+                className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
+                style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+                <Info size={11} /> Why two scores?
+              </button>
+              {result && (
+                <>
+                  <button onClick={handleExportPDF}
+                    className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
+                    style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+                    <Download size={11} /> Export PDF
+                  </button>
+                  <button onClick={() => setResult(null)}
+                    className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
+                    style={{ background: 'rgba(139,92,246,0.1)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.2)' }}>
+                    <Play size={11} /> New Audit
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
-        {result && (
-          <div className="flex items-center gap-2">
-            <button onClick={handleExportPDF} className="text-[11px] font-semibold px-3 py-2 rounded-xl transition-all" style={{ border: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>
-              <Download size={12} className="inline mr-1" /> PDF
-            </button>
-            <button onClick={() => setResult(null)} className="text-[11px] font-semibold px-3 py-2 rounded-xl transition-all" style={{ background: 'rgba(14,165,233,0.1)', color: '#0EA5E9' }}>
-              <Play size={12} className="inline mr-1" /> New
-            </button>
+
+        {/* Divergence explainer (only when result exists and scores differ) */}
+        {result && healthScore !== null && Math.abs(result.readiness_score - healthScore) >= 10 && (
+          <div className="mt-4 pt-3 flex items-start gap-2 text-[11px]" style={{ borderTop: '1px solid rgba(245,158,11,0.15)' }}>
+            <Info size={12} className="shrink-0 mt-0.5" style={{ color: '#F59E0B' }} />
+            <p style={{ color: 'var(--text-muted)' }}>
+              <strong style={{ color: 'var(--text-primary)' }}>Scores differ by {Math.abs(Math.round((result.readiness_score - healthScore) * 10) / 10)} points</strong> — this is expected.
+              The Audit Verdict applies discrete grades (strong=100 · adequate=75 · weak=40 · missing=0), which penalize gaps more harshly than the continuous Health Score.
+              <button onClick={() => setShowMethodology(true)} className="ml-1 font-semibold underline" style={{ color: 'var(--accent-teal)' }}>Learn more</button>
+            </p>
           </div>
         )}
       </div>
+
+      {/* Methodology modal */}
+      {showMethodology && (
+        <ScoringMethodology
+          healthScore={healthScore ?? 0}
+          auditScore={result ? result.readiness_score : lastScore ?? null}
+          onClose={() => setShowMethodology(false)}
+        />
+      )}
 
       {error && <div className="rounded-xl p-4" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)' }}><p className="text-[13px] text-red-600">{error}</p></div>}
 
@@ -293,22 +404,47 @@ export default function AuditPage() {
       {/* ═══ RESULTS ═══ */}
       {result && !loading && groups && (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-3">
-            {[
-              { label: 'Strong', count: result.summary.strong, color: '#10B981', desc: 'Full evidence — audit ready' },
-              { label: 'Adequate', count: result.summary.adequate, color: '#F59E0B', desc: 'Partial — may pass with questions' },
-              { label: 'Weak', count: result.summary.weak, color: '#F97316', desc: 'Minimal — likely audit finding' },
-              { label: 'Missing', count: result.summary.missing, color: '#EF4444', desc: 'No evidence — will fail audit' },
-            ].map(({ label, count, color, desc }) => (
-              <div key={label} className="rounded-xl p-4" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
-                  <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</span>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Verdict Distribution</p>
+              <button onClick={() => setShowMethodology(true)} className="flex items-center gap-1 text-[10px] font-semibold hover:opacity-80" style={{ color: 'var(--accent-teal)' }}>
+                <Info size={10} /> How are these graded?
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { label: 'Strong', count: result.summary.strong, color: '#10B981', pts: 100, desc: 'Full evidence — audit ready' },
+                { label: 'Adequate', count: result.summary.adequate, color: '#F59E0B', pts: 75, desc: 'Partial — may pass with questions' },
+                { label: 'Weak', count: result.summary.weak, color: '#F97316', pts: 40, desc: 'Minimal — likely audit finding' },
+                { label: 'Missing', count: result.summary.missing, color: '#EF4444', pts: 0, desc: 'No evidence — will fail audit' },
+              ].map(({ label, count, color, pts, desc }) => (
+                <div key={label} className="rounded-xl p-4" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)' }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
+                      <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</span>
+                    </div>
+                    <span className="text-[9px] font-mono font-bold" style={{ color }}>{pts} pts</span>
+                  </div>
+                  <span className="text-[24px] font-extrabold" style={{ color }}>{count}</span>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{desc}</p>
+                  <p className="text-[9px] font-mono mt-1" style={{ color: 'var(--text-muted)' }}>
+                    Contributes {count * pts} pts
+                  </p>
                 </div>
-                <span className="text-[24px] font-extrabold" style={{ color }}>{count}</span>
-                <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{desc}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            {/* Score breakdown calculation */}
+            <div className="mt-2 rounded-xl p-3 font-mono text-[10px]" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Calculation:</span> (
+                <span style={{ color: '#10B981' }}>{result.summary.strong}×100</span> +{' '}
+                <span style={{ color: '#F59E0B' }}>{result.summary.adequate}×75</span> +{' '}
+                <span style={{ color: '#F97316' }}>{result.summary.weak}×40</span> +{' '}
+                <span style={{ color: '#EF4444' }}>{result.summary.missing}×0</span>
+              ) ÷ ({result.summary.total_checks}×100) × 100 ={' '}
+              <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{result.readiness_score}%</span>
+            </div>
           </div>
 
           <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Clause-by-Clause Results</p>
@@ -349,6 +485,20 @@ export default function AuditPage() {
                       {isOpen && (
                         <div className="px-4 pb-4 space-y-2 ml-11">
                           {q.description && <div className="p-3 rounded-lg" style={{ background: 'var(--bg-tertiary)' }}><p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{q.description}</p></div>}
+
+                          {/* Verdict explanation — why this clause got this score */}
+                          <div className="p-3 rounded-lg" style={{ background: `${cfg.color}08`, border: `1px solid ${cfg.color}20` }}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Icon size={11} style={{ color: cfg.color }} />
+                              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: cfg.color }}>
+                                Why this scored {cfg.label} ({q.score === 'strong' ? '100' : q.score === 'adequate' ? '75' : q.score === 'weak' ? '40' : '0'} pts)
+                              </span>
+                            </div>
+                            <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+                              {VERDICT_RULES[q.score] || ''}
+                            </p>
+                          </div>
+
                           {q.where_we_check && (
                             <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(14,165,233,0.04)', border: '1px solid rgba(14,165,233,0.1)' }}>
                               <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Checked:</span>

@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDetailedScore, getCommits, getCIRuns, getCheckEvidence } from '../api/compliance';
+import { getAuditHistory } from '../api/audit';
 import {
   Activity, Shield, Lock, AlertTriangle, ExternalLink,
   GitCommit, CheckCircle2, XCircle, Clock, ChevronRight, ChevronDown,
   ShieldCheck, Code, FileText, Users, Bug, Sparkles, ArrowUpRight,
-  ArrowRight,
+  ArrowRight, Info,
 } from 'lucide-react';
 import DashboardSkeleton from '../components/ui/DashboardSkeleton';
+import ScoringMethodology from '../components/ui/ScoringMethodology';
 
 /* ─── Types ─── */
 interface Evidence { file: string; github_url: string; detail: string; status: string }
@@ -20,6 +22,18 @@ const ICONS: Record<string, React.ElementType> = {
   auth_coverage: Lock, input_validation: ShieldCheck, test_coverage: Code,
   risk_verification: AlertTriangle, doc_completeness: FileText, doc_freshness: Clock,
   soup_vulnerability: Bug, codeowners_coverage: Users,
+};
+
+/* ─── Per-check scoring formula explanations ─── */
+const SCORING_HINTS: Record<string, string> = {
+  auth_coverage: 'endpoints_with_get_current_active_user ÷ total_endpoints. Each FastAPI route in backend/app/api/routes/ is scanned for the auth dependency.',
+  input_validation: 'class_c_modules_with_ValueError_raised ÷ total_class_c_modules. Each Class C service is scanned for "raise ValueError" or REQ-SAFE-005 comments.',
+  test_coverage: 'class_c_modules_with_test_file ÷ total_class_c_modules (8 modules). A module is "covered" if backend/tests/unit/test_{module}.py exists.',
+  risk_verification: 'hazards_with_VERIFIED_status ÷ total_hazards in docs/iec62304/03_Risk_Management_File.md. PARTIAL status counts as 0.5.',
+  doc_completeness: 'required_docs_found ÷ expected_docs. Checks SRS, SDS, SAD, Risk Management File, V&V Plan, Release Notes exist.',
+  doc_freshness: 'score based on commit activity in docs/ folder in the last 90 days. 0% = no doc commits, 100% = ≥10 recent doc commits.',
+  soup_vulnerability: '100 − (critical × 10 + high × 5). Scans frontend/backend dependencies against NVD CVE database.',
+  codeowners_coverage: 'class_c_modules_with_CODEOWNERS_entry ÷ total_class_c_modules. Checks .github/CODEOWNERS for explicit ownership of each Class C path.',
 };
 
 /* ─── Responsibility Areas (how IEC 62304 / ISO 13485 / IEC 81001-5-1 organize compliance) ─── */
@@ -60,15 +74,27 @@ export default function DashboardPage() {
   const [data, setData] = useState<Data | null>(null);
   const [commits, setCommits] = useState<Commit[]>([]);
   const [ci, setCi] = useState<CIRun[]>([]);
+  const [lastAuditScore, setLastAuditScore] = useState<number | null>(null);
+  const [lastAuditDate, setLastAuditDate] = useState<Date | null>(null);
   const [expandedArea, setExpandedArea] = useState<string | null>(null);
   const [expandedCheck, setExpandedCheck] = useState<string | null>(null);
   const [deepEvidence, setDeepEvidence] = useState<Record<string, any>>({});
   const [evidenceLoading, setEvidenceLoading] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showMethodology, setShowMethodology] = useState(false);
 
   useEffect(() => {
-    Promise.all([getDetailedScore(), getCommits(6), getCIRuns(5)])
-      .then(([s, c, r]) => { setData(s.data); setCommits(c.data.commits || []); setCi(r.data.ci_runs || []); })
+    Promise.all([getDetailedScore(), getCommits(6), getCIRuns(5), getAuditHistory(10)])
+      .then(([s, c, r, h]) => {
+        setData(s.data);
+        setCommits(c.data.commits || []);
+        setCi(r.data.ci_runs || []);
+        const latest = (h.data.history || []).find((x: any) => x.details?.readiness_score !== undefined);
+        if (latest) {
+          setLastAuditScore(latest.details.readiness_score);
+          setLastAuditDate(new Date(latest.timestamp));
+        }
+      })
       .catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -105,47 +131,122 @@ export default function DashboardPage() {
     <div className="space-y-5">
 
       {/* ═══════════════════════════════════════════════
-          SECTION 1 — STATUS BANNER
-          "Am I ready for the CE Mark audit?"
-          Includes: score, target context, repo link, timestamp
+          SECTION 1 — DUAL-SCORE STATUS BANNER
+          Shows BOTH Health Score (this page) + Audit Verdict (last run)
+          side-by-side with a "Why two scores?" methodology link.
           ═══════════════════════════════════════════════ */}
-      <div className="rounded-2xl p-5 flex items-center justify-between"
+      <div className="rounded-2xl p-5"
         style={{
           background: isReady ? 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))' : 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03))',
           border: `1px solid ${isReady ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)'}`,
         }}>
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: isReady ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)' }}>
-            {isReady ? <CheckCircle2 size={24} style={{ color: '#10B981' }} /> : <AlertTriangle size={24} style={{ color: '#F59E0B' }} />}
-          </div>
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="text-[28px] font-extrabold tracking-tight" style={{ color: 'var(--text-primary)' }}>{ceScore}%</span>
-              <span className="text-[14px] font-bold" style={{ color: isReady ? '#10B981' : '#F59E0B' }}>
-                {isReady ? 'CE Mark Ready' : ceScore >= 95 ? 'Almost Ready' : 'Actions Needed'}
-              </span>
-              <span className="text-[11px] font-mono px-2 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
-                target: ≥95%
-              </span>
+        <div className="flex items-center justify-between gap-6 flex-wrap">
+          {/* Left: icon + summary */}
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: isReady ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)' }}>
+              {isReady ? <CheckCircle2 size={24} style={{ color: '#10B981' }} /> : <AlertTriangle size={24} style={{ color: '#F59E0B' }} />}
             </div>
-            <p className="text-[13px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              {totalPass}/{totalChecks} checks · {actionChecks.length} action{actionChecks.length !== 1 ? 's' : ''} pending · {ciCurrentlyFailing ? <span style={{ color: '#EF4444' }}>CI failing</span> : <span style={{ color: '#10B981' }}>CI passing</span>} ·{' '}
-              <a href={data.repo} target="_blank" rel="noopener" className="hover:underline inline-flex items-center gap-1" style={{ color: 'var(--accent-teal)' }}>
-                nicolasbonilla/medical-imaging-viewer <ExternalLink size={10} />
-              </a>
+            <div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-[18px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                  {isReady ? 'CE Mark Ready' : ceScore >= 95 ? 'Almost Ready' : 'Actions Needed'}
+                </span>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
+                  target: both scores ≥95%
+                </span>
+              </div>
+              <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                {totalPass}/{totalChecks} checks · {actionChecks.length} action{actionChecks.length !== 1 ? 's' : ''} pending · {ciCurrentlyFailing ? <span style={{ color: '#EF4444' }}>CI failing</span> : <span style={{ color: '#10B981' }}>CI passing</span>} ·{' '}
+                <a href={data.repo} target="_blank" rel="noopener" className="hover:underline inline-flex items-center gap-1" style={{ color: 'var(--accent-teal)' }}>
+                  nicolasbonilla/medical-imaging-viewer <ExternalLink size={10} />
+                </a>
+              </p>
+            </div>
+          </div>
+
+          {/* Right: dual scores + methodology link */}
+          <div className="flex items-stretch gap-3">
+            {/* Health Score */}
+            <div className="rounded-xl px-4 py-2.5 min-w-[140px]"
+              style={{ background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.20)' }}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Activity size={10} style={{ color: '#0EA5E9' }} />
+                <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: '#0EA5E9' }}>Health Score</span>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[26px] font-extrabold tabular-nums leading-none" style={{ color: 'var(--text-primary)' }}>{ceScore}</span>
+                <span className="text-[14px] font-bold" style={{ color: 'var(--text-muted)' }}>%</span>
+              </div>
+              <div className="text-[9px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Live repo telemetry</div>
+            </div>
+
+            {/* Audit Verdict */}
+            <div className="rounded-xl px-4 py-2.5 min-w-[140px]"
+              style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.20)' }}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <ShieldCheck size={10} style={{ color: '#8B5CF6' }} />
+                <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: '#8B5CF6' }}>Audit Verdict</span>
+              </div>
+              {lastAuditScore !== null ? (
+                <>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-[26px] font-extrabold tabular-nums leading-none" style={{ color: 'var(--text-primary)' }}>{lastAuditScore}</span>
+                    <span className="text-[14px] font-bold" style={{ color: 'var(--text-muted)' }}>%</span>
+                  </div>
+                  <div className="text-[9px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    {lastAuditDate && `${Math.floor((Date.now() - lastAuditDate.getTime()) / 86400000)}d ago`}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-[16px] font-bold" style={{ color: 'var(--text-muted)' }}>—</div>
+                  <div className="text-[9px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Run audit to see</div>
+                </>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-1.5 justify-center">
+              <button onClick={() => setShowMethodology(true)}
+                className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
+                style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+                <Info size={11} /> Why two scores?
+              </button>
+              <button onClick={() => navigate('/audit')}
+                className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
+                style={{ background: 'rgba(139,92,246,0.1)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.2)' }}>
+                <ShieldCheck size={11} /> Run Audit →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Divergence warning if scores differ significantly */}
+        {lastAuditScore !== null && Math.abs(ceScore - lastAuditScore) >= 10 && (
+          <div className="mt-4 pt-3 flex items-start gap-2 text-[11px]" style={{ borderTop: '1px solid rgba(245,158,11,0.15)' }}>
+            <Info size={12} className="shrink-0 mt-0.5" style={{ color: '#F59E0B' }} />
+            <p style={{ color: 'var(--text-muted)' }}>
+              <strong style={{ color: 'var(--text-primary)' }}>Scores differ by {Math.abs(Math.round((ceScore - lastAuditScore) * 10) / 10)} points</strong> — this is normal.
+              Health Score rewards partial progress (e.g., 88% of endpoints protected = 88 pts).
+              Audit Verdict applies discrete auditor grades (same 88% = "adequate" = 75 pts).
+              <button onClick={() => setShowMethodology(true)} className="ml-1 font-semibold underline" style={{ color: 'var(--accent-teal)' }}>Learn more</button>
             </p>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => navigate('/audit')} className="text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
-            style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
-            Run Audit →
-          </button>
-          <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
-            {new Date(data.computed_at).toLocaleString()}
-          </span>
+        )}
+
+        <div className="mt-3 pt-2 text-[10px] font-mono" style={{ color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)' }}>
+          Last computed: {new Date(data.computed_at).toLocaleString()}
         </div>
       </div>
+
+      {/* Methodology modal */}
+      {showMethodology && (
+        <ScoringMethodology
+          healthScore={ceScore}
+          auditScore={lastAuditScore}
+          onClose={() => setShowMethodology(false)}
+        />
+      )}
 
       {/* ═══════════════════════════════════════════════
           SECTION 2 — URGENT ACTIONS
@@ -312,6 +413,20 @@ export default function DashboardPage() {
                               <div>
                                 <p className="text-[11px] text-sky-900 leading-relaxed font-medium">{check.description}</p>
                                 <p className="text-[10px] text-sky-500 mt-1 font-mono font-semibold">{check.standard}</p>
+                              </div>
+                            </div>
+
+                            {/* How this score is computed — methodology hint */}
+                            <div className="flex gap-2.5 p-3 rounded-lg" style={{ background: 'rgba(14,165,233,0.04)', border: '1px solid rgba(14,165,233,0.12)' }}>
+                              <Activity size={13} className="shrink-0 mt-0.5" style={{ color: '#0EA5E9' }} />
+                              <div className="flex-1">
+                                <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: '#0EA5E9' }}>How this score is computed</p>
+                                <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+                                  {SCORING_HINTS[check.id] || 'Continuous percentage computed by static analysis of the repo.'}
+                                </p>
+                                <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }}>
+                                  This is a <strong style={{ color: '#0EA5E9' }}>continuous Health Score metric</strong> — it rewards partial progress. The Audit verdict grades the same evidence as strong / adequate / weak / missing.
+                                </p>
                               </div>
                             </div>
 
