@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDetailedScore, getCommits, getCIRuns, getCheckEvidence } from '../api/compliance';
+import { Area, AreaChart, ResponsiveContainer } from 'recharts';
+import { getDetailedScore, getCommits, getCIRuns, getCheckEvidence, getScoreHistory } from '../api/compliance';
 import { getAuditHistory } from '../api/audit';
 import {
   Activity, Shield, Lock, AlertTriangle, ExternalLink,
@@ -76,6 +77,7 @@ export default function DashboardPage() {
   const [ci, setCi] = useState<CIRun[]>([]);
   const [lastAuditScore, setLastAuditScore] = useState<number | null>(null);
   const [lastAuditDate, setLastAuditDate] = useState<Date | null>(null);
+  const [scoreSparkline, setScoreSparkline] = useState<{ t: string; v: number }[]>([]);
   const [expandedArea, setExpandedArea] = useState<string | null>(null);
   const [expandedCheck, setExpandedCheck] = useState<string | null>(null);
   const [deepEvidence, setDeepEvidence] = useState<Record<string, any>>({});
@@ -93,8 +95,9 @@ export default function DashboardPage() {
       safe(getCommits(6)),
       safe(getCIRuns(5)),
       safe(getAuditHistory(10)),
+      safe(getScoreHistory(30)),
     ])
-      .then(([s, c, r, h]) => {
+      .then(([s, c, r, h, hist]) => {
         if (s) setData(s.data);
         if (c) setCommits(c.data.commits || []);
         if (r) setCi(r.data.ci_runs || []);
@@ -104,6 +107,14 @@ export default function DashboardPage() {
             setLastAuditScore(latest.details.readiness_score);
             setLastAuditDate(new Date(latest.timestamp));
           }
+        }
+        if (hist) {
+          setScoreSparkline(
+            (hist.data.history || []).map((row: any) => ({
+              t: row.timestamp,
+              v: row.scores?.ce_mark_overall ?? 0,
+            }))
+          );
         }
       })
       .finally(() => setLoading(false));
@@ -177,8 +188,8 @@ export default function DashboardPage() {
 
           {/* Right: dual scores + methodology link */}
           <div className="flex items-stretch gap-3">
-            {/* Health Score */}
-            <div className="rounded-xl px-4 py-2.5 min-w-[140px]"
+            {/* Health Score with sparkline */}
+            <div className="rounded-xl px-4 py-2.5 min-w-[160px]"
               style={{ background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.20)' }}>
               <div className="flex items-center gap-1.5 mb-0.5">
                 <Activity size={10} style={{ color: '#0EA5E9' }} />
@@ -188,7 +199,18 @@ export default function DashboardPage() {
                 <span className="text-[26px] font-extrabold tabular-nums leading-none" style={{ color: 'var(--text-primary)' }}>{ceScore}</span>
                 <span className="text-[14px] font-bold" style={{ color: 'var(--text-muted)' }}>%</span>
               </div>
-              <div className="text-[9px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Live repo telemetry</div>
+              <div className="text-[9px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Live · {scoreSparkline.length > 1 ? `${scoreSparkline.length} pts (30d)` : 'building history…'}
+              </div>
+              {scoreSparkline.length > 1 && (
+                <div style={{ height: 28, marginTop: 4 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={scoreSparkline}>
+                      <Area type="monotone" dataKey="v" stroke="#0EA5E9" strokeWidth={1.5} fill="#0EA5E9" fillOpacity={0.18} dot={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
 
             {/* Audit Verdict */}

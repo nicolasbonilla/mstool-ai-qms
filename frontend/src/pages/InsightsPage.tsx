@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import {
   Brain, AlertTriangle, CheckCircle2, Clock, TrendingDown,
-  GitCommit, Target, Info, Download, FileText,
+  GitCommit, Target, Info, Download, FileText, Link2, Scan, Eye,
 } from 'lucide-react';
-import { getClausePredictions, getChangeImpact, getGapExplanation, getValidationDossier, validateAgent } from '../api/predict';
+import {
+  getClausePredictions, getChangeImpact, getGapExplanation,
+  getValidationDossier, validateAgent,
+  getSuspectLinks, getMissingLinks, getSamdScan,
+} from '../api/predict';
 import PageSkeleton from '../components/ui/PageSkeleton';
 
 /* ─── Types ─── */
@@ -71,6 +75,9 @@ export default function InsightsPage() {
   const [gaps, setGaps] = useState<GapItem[]>([]);
   const [totalCost, setTotalCost] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
+  const [suspect, setSuspect] = useState<any | null>(null);
+  const [missing, setMissing] = useState<any | null>(null);
+  const [samd, setSamd] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [validating, setValidating] = useState<string | null>(null);
@@ -82,7 +89,10 @@ export default function InsightsPage() {
       safe(getClausePredictions()),
       safe(getChangeImpact(10)),
       safe(getGapExplanation()),
-    ]).then(([c, i, g]) => {
+      safe(getSuspectLinks()),
+      safe(getMissingLinks(15, 0.2)),
+      safe(getSamdScan()),
+    ]).then(([c, i, g, s, m, sc]) => {
       if (c) setClauses(c.data.predictions || []);
       if (i) setImpact(i.data.findings || []);
       if (g) {
@@ -90,6 +100,9 @@ export default function InsightsPage() {
         setTotalCost(g.data.total_cost_pts || 0);
         setScore(g.data.score || 0);
       }
+      if (s) setSuspect(s.data);
+      if (m) setMissing(m.data);
+      if (sc) setSamd(sc.data);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -304,6 +317,118 @@ export default function InsightsPage() {
           })}
         </div>
       </div>
+
+      {/* ═══ SECTION 4 — Suspect Links ═══ */}
+      {suspect && (suspect.suspect_code_ids?.length > 0 || suspect.suspect_req_ids?.length > 0) && (
+        <div className="rounded-2xl p-5" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                Suspect trace links
+              </span>
+              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Trace edges whose underlying code/tests changed in the last {suspect.window_days} days — re-verify before next audit.
+              </p>
+            </div>
+            <Eye size={12} style={{ color: 'var(--text-muted)' }} />
+          </div>
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            <div className="rounded-lg p-3" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
+              <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: '#F59E0B' }}>Suspect REQs</div>
+              <div className="text-[20px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{suspect.suspect_req_ids?.length ?? 0}</div>
+            </div>
+            <div className="rounded-lg p-3" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}>
+              <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: '#EF4444' }}>Suspect Code</div>
+              <div className="text-[20px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{suspect.suspect_code_ids?.length ?? 0}</div>
+            </div>
+            <div className="rounded-lg p-3" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
+              <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: '#F59E0B' }}>Suspect Tests</div>
+              <div className="text-[20px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{suspect.suspect_test_ids?.length ?? 0}</div>
+            </div>
+          </div>
+          <div className="space-y-1">
+            {(suspect.suspect_req_ids || []).slice(0, 6).map((id: string) => (
+              <div key={id} className="flex items-center gap-2 text-[10px] p-1.5 rounded" style={{ background: 'var(--bg-tertiary)' }}>
+                <span className="w-2 h-2 rounded-full" style={{ background: '#F59E0B' }} />
+                <code className="font-mono font-bold" style={{ color: '#F59E0B' }}>{id}</code>
+                <span style={{ color: 'var(--text-muted)' }}>downstream of suspect code change — needs re-verification</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ SECTION 5 — Missing Trace Link Predictor ═══ */}
+      {missing && missing.predictions?.length > 0 && (
+        <div className="rounded-2xl p-5" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                Predicted missing trace links
+              </span>
+              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                REQ↔test pairs with high token similarity but no explicit trace edge. Method: {missing.method}.
+              </p>
+            </div>
+            <Link2 size={12} style={{ color: 'var(--text-muted)' }} />
+          </div>
+          <table className="w-full text-left">
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <th className="text-[9px] font-bold uppercase tracking-wider px-2 py-1.5" style={{ color: 'var(--text-muted)' }}>Requirement</th>
+                <th className="text-[9px] font-bold uppercase tracking-wider px-2 py-1.5" style={{ color: 'var(--text-muted)' }}>Likely test</th>
+                <th className="text-[9px] font-bold uppercase tracking-wider px-2 py-1.5 text-right" style={{ color: 'var(--text-muted)' }}>Similarity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {missing.predictions.slice(0, 12).map((p: any, i: number) => (
+                <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  <td className="px-2 py-1.5"><code className="text-[10px] font-mono font-bold" style={{ color: 'var(--accent-teal)' }}>{p.req_id}</code></td>
+                  <td className="px-2 py-1.5"><code className="text-[10px] font-mono" style={{ color: 'var(--text-secondary)' }}>{p.test_id}</code></td>
+                  <td className="px-2 py-1.5 text-right">
+                    <span className="text-[11px] font-bold tabular-nums" style={{ color: p.similarity > 0.4 ? '#10B981' : '#F59E0B' }}>
+                      {(p.similarity * 100).toFixed(0)}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ═══ SECTION 6 — SaMD-specific scanner ═══ */}
+      {samd && samd.findings?.length > 0 && (
+        <div className="rounded-2xl p-5" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                SaMD-specific safety scanner
+              </span>
+              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                NIfTI/DICOM/voxel/ONNX-aware static rules. {samd.files_scanned} files scanned, {samd.rules_applied} rules applied, {samd.findings_count} findings.
+              </p>
+            </div>
+            <Scan size={12} style={{ color: 'var(--text-muted)' }} />
+          </div>
+          <div className="space-y-1.5">
+            {samd.findings.slice(0, 12).map((f: any, i: number) => (
+              <div key={i} className="rounded-lg p-2.5" style={{ background: 'var(--bg-tertiary)', border: `1px solid ${f.severity === 'warning' ? 'rgba(245,158,11,0.20)' : 'rgba(100,116,139,0.15)'}` }}>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ background: f.severity === 'warning' ? 'rgba(245,158,11,0.12)' : 'rgba(100,116,139,0.12)', color: f.severity === 'warning' ? '#F59E0B' : '#64748B' }}>
+                    {f.severity}
+                  </span>
+                  <code className="text-[10px] font-mono font-bold" style={{ color: 'var(--text-primary)' }}>{f.rule}</code>
+                  <span className="text-[9px] font-mono ml-auto" style={{ color: 'var(--text-muted)' }}>{f.file}:{f.line}</span>
+                </div>
+                <p className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{f.why}</p>
+                <p className="text-[10px] mt-0.5"><span style={{ color: 'var(--accent-teal)', fontWeight: 600 }}>Fix: </span><span style={{ color: 'var(--text-secondary)' }}>{f.fix}</span></p>
+                <p className="text-[9px] mt-0.5 italic" style={{ color: 'var(--text-muted)' }}>{f.standard}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Methodology footer */}
       <div className="rounded-xl p-3 flex items-start gap-2" style={{ background: 'rgba(236,72,153,0.04)', border: '1px solid rgba(236,72,153,0.12)' }}>

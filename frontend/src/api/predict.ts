@@ -7,3 +7,8 @@ export const getGapExplanation = () => apiClient.get('/predict/explain');
 
 export const getValidationDossier = () => apiClient.get('/agents/validation/dossier');
 export const validateAgent = (name: string) => apiClient.post(`/agents/${name}/validate`);
+
+export const getSuspectLinks = () => apiClient.get('/predict/suspect-links');
+export const getMissingLinks = (top_k = 25, min_score = 0.18) =>
+  apiClient.get('/predict/missing-links', { params: { top_k, min_score } });
+export const getSamdScan = () => apiClient.get('/predict/samd-scan');

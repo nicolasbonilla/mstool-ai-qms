@@ -13,13 +13,23 @@ from app.agents.soup_monitor_agent import SOUPMonitorAgent
 from app.agents.pr_reviewer_agent import PRReviewerAgent
 from app.agents.doc_drift_agent import DocDriftAgent
 from app.agents.capa_drafter_agent import CAPADrafterAgent
+from app.agents.clause_chat_agent import ClauseChatAgent
+from app.agents.audit_prep_agent import AuditPreparationAgent
+from app.agents.risk_analyst_agent import RiskAnalystAgent
+from app.agents.regulatory_watch_agent import RegulatoryWatchAgent
+from app.agents.autonomous_gap_closer_agent import AutonomousGapCloserAgent
 
 AGENT_REGISTRY: Dict[str, BaseAgent] = {
-    "traceability":  TraceabilityAgent(),
-    "soup_monitor":  SOUPMonitorAgent(),
-    "pr_reviewer":   PRReviewerAgent(),
-    "doc_drift":     DocDriftAgent(),
-    "capa_drafter":  CAPADrafterAgent(),
+    "traceability":          TraceabilityAgent(),
+    "soup_monitor":          SOUPMonitorAgent(),
+    "pr_reviewer":           PRReviewerAgent(),
+    "doc_drift":             DocDriftAgent(),
+    "capa_drafter":          CAPADrafterAgent(),
+    "clause_chat":           ClauseChatAgent(),
+    "audit_prep":            AuditPreparationAgent(),
+    "risk_analyst":          RiskAnalystAgent(),
+    "regulatory_watch":      RegulatoryWatchAgent(),
+    "autonomous_gap_closer": AutonomousGapCloserAgent(),
 }
 
 

@@ -104,6 +104,52 @@ GOLDEN_SUITE: Dict[str, List[Dict]] = {
             },
         },
     ],
+    "clause_chat": [
+        {
+            "id": "chat-t01",
+            "description": "Returns answer to a basic question",
+            "context": {"question": "How is auth coverage measured?"},
+            "expected_properties": {"has_summary": True, "findings_is_list": True},
+        },
+        {
+            "id": "chat-t02-empty",
+            "description": "Empty question must decline cleanly",
+            "context": {"question": ""},
+            "expected_properties": {"has_summary": True},
+        },
+    ],
+    "audit_prep": [
+        {
+            "id": "ap-t01",
+            "description": "Default full audit run produces a structured prep pack",
+            "context": {"clause": "full"},
+            "expected_properties": {"has_summary": True, "findings_is_list": True},
+        },
+    ],
+    "risk_analyst": [
+        {
+            "id": "ra-t01",
+            "description": "Runs end-to-end and returns structured findings list",
+            "context": {},
+            "expected_properties": {"has_summary": True, "findings_is_list": True},
+        },
+    ],
+    "regulatory_watch": [
+        {
+            "id": "rw-t01",
+            "description": "Produces impact memo on the curated update list",
+            "context": {},
+            "expected_properties": {"has_summary": True, "findings_is_list": True},
+        },
+    ],
+    "autonomous_gap_closer": [
+        {
+            "id": "agc-t01",
+            "description": "Drafts a form for the top gap (auto_persist disabled)",
+            "context": {"auto_persist_draft": False},
+            "expected_properties": {"has_summary": True, "findings_is_list": True},
+        },
+    ],
 }
 
 

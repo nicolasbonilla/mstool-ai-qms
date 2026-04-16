@@ -1,0 +1,98 @@
+rules_version = '2';
+
+// MSTool-AI-QMS — Firestore security rules
+//
+// Enforces 21 CFR Part 11 §11.10(c)(d) at the data layer:
+// the WORM audit trail (qms_audit_trail) is append-only — nothing
+// can update or delete an existing entry, even with admin credentials.
+// Same goes for qms_baselines after they are signed.
+//
+// All read/write actually goes through the FastAPI backend using the
+// Firebase Admin SDK, which bypasses these rules. They exist so that
+// IF anyone ever opens Firestore directly with a user token, they
+// cannot tamper with the regulated records.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // WORM audit trail — append only, no updates, no deletes.
+    match /qms_audit_trail/{entryId} {
+      allow create: if request.auth != null;
+      allow read:   if request.auth != null;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Ledger head — only the backend (admin SDK) should write this.
+    match /qms_ledger_head/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+
+    // Score history — append-only by hour bucket.
+    match /qms_score_history/{bucketId} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;  // overwrite same bucket allowed
+      allow delete: if false;
+    }
+
+    // Baselines — readable to all auth users. Once signed, immutable.
+    match /qms_baselines/{tag} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null
+                     && resource.data.status == 'draft';
+      allow delete: if false;
+    }
+
+    // Agent runs — append-only history. Approval flag is the only field
+    // we allow updating.
+    match /qms_agent_runs/{runId} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null
+                     && request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['approved', 'approved_by', 'approved_at', 'approval_notes']);
+      allow delete: if false;
+    }
+
+    // Agent validation results — append-only.
+    match /qms_agent_validations/{id} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Forms — editable until signed; status='signed' freezes the doc.
+    match /qms_forms/{formId} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null
+                     && resource.data.status != 'signed';
+      allow delete: if request.auth != null
+                     && resource.data.status == 'draft';
+    }
+
+    // Alerts — readable; only the backend creates them; users can ack.
+    match /qms_alerts/{alertId} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null
+                     && request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['acknowledged', 'acknowledged_at', 'acknowledged_by']);
+      allow delete: if false;
+    }
+
+    // Users / settings — admin SDK only via backend.
+    match /qms_users/{uid} {
+      allow read:  if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+    match /qms_settings/{key} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+  }
+}

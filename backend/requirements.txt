@@ -29,6 +29,13 @@ python-dotenv>=1.1.0
 python-json-logger==2.0.7
 aiofiles==24.1.0
 
+# In-process scheduler — runs hourly snapshots + daily sentinel inside Cloud Run
+# (avoids the need to enable Cloud Scheduler API on the GCP project)
+APScheduler==3.10.4
+
+# Excel export for the CE Mark Submission Package (RTM matrix)
+openpyxl==3.1.5
+
 # PDF Generation
 reportlab==4.2.5
 

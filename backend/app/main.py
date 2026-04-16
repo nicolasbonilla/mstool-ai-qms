@@ -35,7 +35,13 @@ def _warm_cache():
 async def lifespan(app):
     # Startup: warm cache in background thread so it doesn't block startup
     threading.Thread(target=_warm_cache, daemon=True).start()
-    yield
+    # Start the in-process scheduler (hourly snapshot, daily sentinel, etc.)
+    from app.core.scheduler import start_scheduler, shutdown_scheduler
+    start_scheduler()
+    try:
+        yield
+    finally:
+        shutdown_scheduler()
 
 
 import logging
@@ -68,7 +74,7 @@ app.add_middleware(AuditTrailMiddleware)
 # Routes
 from app.api.routes import (
     compliance, forms, users, traceability, audit, soup, ai,
-    system, activity, baselines, predict,
+    system, activity, baselines, predict, webhooks,
     agents as agents_route,
 )
 
@@ -84,6 +90,7 @@ app.include_router(activity.router, prefix=settings.API_V1_STR)
 app.include_router(baselines.router, prefix=settings.API_V1_STR)
 app.include_router(agents_route.router, prefix=settings.API_V1_STR)
 app.include_router(predict.router, prefix=settings.API_V1_STR)
+app.include_router(webhooks.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/", tags=["Health"])
