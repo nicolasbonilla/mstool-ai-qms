@@ -40,7 +40,7 @@ steps:
       # min-instances=0 + cpu-throttling, idle Cloud Run cost is ~$0.
       - '--cpu-throttling'
       - '--max-instances'
-      - '3'
+      - '2'
       # SCALE TO ZERO. Cloud Scheduler hits /api/v1/cron/* endpoints to
       # wake the service when needed. APScheduler is INTENTIONALLY OFF
       # in production so we don't need a 24/7 instance. Net savings:
@@ -56,6 +56,43 @@ steps:
       # before finding it — never go back to --set-env-vars here.
       - '--update-env-vars'
       - 'GITHUB_REPO=nicolasbonilla/medical-imaging-viewer,GOOGLE_CLOUD_PROJECT=mstool-ai-qms,QMS_FIREBASE_PROJECT=mstool-ai-qms'
+
+  # Cost guardrail #1: prune old GCR images so storage doesn't accumulate.
+  # Keeps the 3 most recent (current + previous + rollback target). Without
+  # this, every deploy adds ~250MB to Container Registry storage forever.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        gcloud container images list-tags gcr.io/$PROJECT_ID/mstool-ai-qms \
+          --sort-by=~timestamp --format='value(digest)' --limit=999 | tail -n +4 | \
+        while read DIGEST; do
+          if [ -n "$$DIGEST" ]; then
+            gcloud container images delete \
+              "gcr.io/$PROJECT_ID/mstool-ai-qms@$$DIGEST" \
+              --force-delete-tags --quiet || true
+          fi
+        done
+
+  # Cost guardrail #2: prune old Cloud Run revisions (keep 2 newest only).
+  # Each revision keeps a copy of the spec; safe to delete inactive ones.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        ACTIVE=$(gcloud run services describe mstool-ai-qms \
+          --region=us-central1 --format='value(status.latestReadyRevisionName)')
+        gcloud run revisions list --service=mstool-ai-qms --region=us-central1 \
+          --sort-by=~metadata.creationTimestamp --format='value(metadata.name)' \
+          | tail -n +3 | while read REV; do
+            if [ -n "$$REV" ] && [ "$$REV" != "$$ACTIVE" ]; then
+              gcloud run revisions delete "$$REV" --region=us-central1 --quiet || true
+            fi
+          done
 
 images:
   - 'gcr.io/$PROJECT_ID/mstool-ai-qms:$COMMIT_SHA'

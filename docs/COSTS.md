@@ -4,19 +4,36 @@ This document is the source of truth for production costs and the design
 choices that keep them low. Update it when you change Cloud Run config,
 add new agents, or change Claude budget caps.
 
-## Current monthly estimate
+## Current monthly estimate (after deep optimization, April 2026)
 
 | Component | Config | Estimated | Worst-case |
 |---|---|---|---|
-| **Cloud Run** | min=0, max=3, 512Mi, 1 vCPU, CPU-throttled | **~$0-5** | ~$15 |
-| **Cloud Scheduler** | 6 free jobs (under 3-job free tier × 2 projects) | **$0** | $0 |
-| **Firestore** | Reads/writes + storage | **~$1-3** | ~$10 |
-| **Container Registry** | 2 tags per build × ~200MB | **~$0.50** | $1 |
+| **Cloud Run** | min=0, max=2, 512Mi, 1 vCPU, CPU-throttled | **~$0-3** | ~$10 |
+| **Cloud Scheduler** | 6 jobs (under 3-job free tier × 2 projects) | **$0** | $0 |
+| **Firestore** | Reads/writes + storage + daily sweep | **~$0-2** | ~$5 |
+| **Container Registry** | 3 image cap + Cloud Build auto-prune | **~$0.05** | $0.20 |
+| **Cloud Storage (Cloud Build sources)** | 7-day lifecycle + post-build cleanup | **~$0.01** | $0.05 |
 | **Cloud Build** | ~10 deploys/mo × 3 min | **~$0.30** | $1 |
+| **Cloud Logging** | _Default 7d retention + uvicorn excluded | **~$0.10** | $0.50 |
 | **Firebase Hosting** | Static frontend | **$0** (under free tier) | $1 |
-| **Anthropic Claude API** | Capped at 50/hr × 24 × 30 × $0.005 | **$0-50** typical | **$180** absolute max |
-| **Total infra (excl. AI)** | | **~$2-9/month** | **~$28** |
-| **Total with capped AI** | | **~$5-60/month** | **~$210** |
+| **Anthropic Claude API** | Capped at 50/hr × 24 × 30 × $0.005 | **$0-30** typical | **$180** absolute max |
+| **Total infra (excl. AI)** | | **~$0.50-5/month** | **~$18** |
+| **Total with capped AI** | | **~$3-35/month** | **~$200** |
+
+## Two-pass optimization log
+
+**First pass** (cost-conscious infrastructure):
+- Was: ~$50-65/month base. Now: ~$2-9/month.
+
+**Second pass** (deep audit found 4 more leaks):
+- 31 unused GCR images deleted (~$0.50/mo saved)
+- 1.06 GB Cloud Build sources purged + 7-day lifecycle (saves recurring growth)
+- 15 inactive Cloud Run revisions cleaned
+- Log retention 30d→7d (~$0.30/mo saved)
+- max-instances 3→2 (caps burst spend)
+- Auto-prune steps added to cloudbuild.yaml so this never regresses
+
+**Final**: ~$0.50-5/month base, ~85-99% saved vs original config.
 
 Compared to previous config (`min-instances=1`, 1Gi memory, no caps):
 - Was: ~$50-65/month base + uncapped AI risk
