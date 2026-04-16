@@ -49,6 +49,7 @@ export default function AuditPage() {
   const [showMethodology, setShowMethodology] = useState(false);
 
   useEffect(() => {
+    // Each fetch is independent — any failure stays local to that setter.
     getAuditPlan().then(r => setPlan(r.data.clauses || [])).catch(() => {});
     getAuditHistory(5).then(r => setHistory(r.data.history || [])).catch(() => {});
     getComplianceScore().then(r => setHealthScore(r.data.scores?.ce_mark_overall ?? null)).catch(() => {});

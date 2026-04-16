@@ -84,18 +84,29 @@ export default function DashboardPage() {
   const [showMethodology, setShowMethodology] = useState(false);
 
   useEffect(() => {
-    Promise.all([getDetailedScore(), getCommits(6), getCIRuns(5), getAuditHistory(10)])
+    // Wrap each call individually so one failure (e.g., audit history requires
+    // a role the current user lacks) doesn't blank the whole dashboard.
+    const safe = <T,>(p: Promise<T>): Promise<T | null> => p.catch(() => null);
+
+    Promise.all([
+      safe(getDetailedScore()),
+      safe(getCommits(6)),
+      safe(getCIRuns(5)),
+      safe(getAuditHistory(10)),
+    ])
       .then(([s, c, r, h]) => {
-        setData(s.data);
-        setCommits(c.data.commits || []);
-        setCi(r.data.ci_runs || []);
-        const latest = (h.data.history || []).find((x: any) => x.details?.readiness_score !== undefined);
-        if (latest) {
-          setLastAuditScore(latest.details.readiness_score);
-          setLastAuditDate(new Date(latest.timestamp));
+        if (s) setData(s.data);
+        if (c) setCommits(c.data.commits || []);
+        if (r) setCi(r.data.ci_runs || []);
+        if (h) {
+          const latest = (h.data.history || []).find((x: any) => x.details?.readiness_score !== undefined);
+          if (latest) {
+            setLastAuditScore(latest.details.readiness_score);
+            setLastAuditDate(new Date(latest.timestamp));
+          }
         }
       })
-      .catch(() => {}).finally(() => setLoading(false));
+      .finally(() => setLoading(false));
   }, []);
 
   const navigate = useNavigate();
