@@ -36,9 +36,9 @@ steps:
       - '512Mi'
       - '--cpu'
       - '1'
-      # CPU is allocated only during request handling (not idle). With
-      # min-instances=0 + this flag, idle Cloud Run is essentially $0.
-      - '--no-cpu-throttling=false'
+      # CPU is throttled when idle (cheaper than always-allocated). With
+      # min-instances=0 + cpu-throttling, idle Cloud Run cost is ~$0.
+      - '--cpu-throttling'
       - '--max-instances'
       - '3'
       # SCALE TO ZERO. Cloud Scheduler hits /api/v1/cron/* endpoints to
