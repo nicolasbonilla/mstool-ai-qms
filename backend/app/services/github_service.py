@@ -179,6 +179,20 @@ class GitHubService:
             for c in data
         ]
 
+    def get_file_last_commit(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Get the most recent commit that touched a specific file (ISO 13485 §4.2.4 traceability)."""
+        data = self._get("commits", params={"path": file_path, "per_page": 1})
+        if not data or not isinstance(data, list) or len(data) == 0:
+            return None
+        c = data[0]
+        return {
+            "sha": c["sha"][:7],
+            "message": c["commit"]["message"].split("\n")[0],
+            "author": c["commit"]["author"]["name"],
+            "date": c["commit"]["author"]["date"],
+            "github_url": f"https://github.com/{self.repo}/commit/{c['sha']}",
+        }
+
     def get_pull_requests(self, state: str = "all", count: int = 30) -> List[Dict[str, Any]]:
         """Get pull requests."""
         data = self._get("pulls", params={"state": state, "per_page": count})

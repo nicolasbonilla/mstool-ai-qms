@@ -124,18 +124,93 @@ class ComplianceService:
         }
 
     def get_document_inventory(self) -> List[Dict[str, Any]]:
-        """List all regulatory documents with metadata."""
+        """List all regulatory documents with full IEC 62304 §5.1.7 / ISO 13485 §4.2.4 metadata.
+
+        Includes: last modification date (from git), days since modified, next review due
+        (annual cycle per ISO 13485 industry practice), review status, last author/message.
+        """
+        from datetime import timedelta
+
+        # ISO 13485 industry practice: annual review cycle for QMS documents
+        REVIEW_CYCLE_DAYS = 365
+        DUE_SOON_THRESHOLD_DAYS = 30
+
+        # IEC 62304 §5.1.7 — document owner per standard family
+        OWNER_BY_STANDARD = {
+            "iec62304": "Software Lead",
+            "qms": "QMS Manager",
+            "clinical": "Clinical Advisor",
+            "usability": "UX Lead",
+            "mdr": "Regulatory Affairs",
+            "ai-act": "AI Governance Lead",
+        }
+
+        STANDARD_LABELS = {
+            "iec62304": "IEC 62304",
+            "qms": "ISO 13485",
+            "clinical": "ISO 14155",
+            "usability": "IEC 62366-1",
+            "mdr": "EU MDR 2017/745",
+            "ai-act": "EU AI Act",
+        }
+
         documents = []
+        now = datetime.now(timezone.utc)
+
         for subdir in ["iec62304", "qms", "clinical", "usability", "mdr", "ai-act"]:
             md_files = self._list_md_files(f"docs/{subdir}")
             for md in sorted(md_files, key=lambda x: x["name"]):
+                # Pull last commit metadata for review-cycle calculation
+                last_commit = self.github.get_file_last_commit(md["path"]) or {}
+                last_modified_iso = last_commit.get("date")
+                days_since = None
+                next_review_due_iso = None
+                days_until_review = None
+                review_status = "unknown"
+                freshness = "yellow"
+
+                if last_modified_iso:
+                    try:
+                        last_modified = datetime.fromisoformat(last_modified_iso.replace("Z", "+00:00"))
+                        days_since = (now - last_modified).days
+                        next_review_due = last_modified + timedelta(days=REVIEW_CYCLE_DAYS)
+                        next_review_due_iso = next_review_due.isoformat()
+                        days_until_review = (next_review_due - now).days
+                        if days_until_review < 0:
+                            review_status = "overdue"
+                            freshness = "red"
+                        elif days_until_review <= DUE_SOON_THRESHOLD_DAYS:
+                            review_status = "due_soon"
+                            freshness = "yellow"
+                        else:
+                            review_status = "current"
+                            freshness = "green"
+                    except (ValueError, TypeError):
+                        pass
+
                 documents.append({
                     "path": md["path"],
                     "doc_id": md["name"].split("_")[0] if "_" in md["name"] else md["name"].replace(".md", ""),
                     "title": md["name"].replace(".md", "").replace("_", " "),
                     "standard": subdir,
-                    "lines": md.get("size", 0) // 40,  # Approximate lines from size
-                    "freshness": "green",  # Will be computed from git blame later
+                    "standard_label": STANDARD_LABELS.get(subdir, subdir),
+                    "owner": OWNER_BY_STANDARD.get(subdir, "Unassigned"),
+                    "lines": md.get("size", 0) // 40,
+                    "size_bytes": md.get("size", 0),
+                    "github_url": f"https://github.com/{self.github.repo}/blob/main/{md['path']}",
+                    # ISO 13485 §4.2.4 — review cycle metadata
+                    "last_modified": last_modified_iso,
+                    "days_since_modified": days_since,
+                    "next_review_due": next_review_due_iso,
+                    "days_until_review": days_until_review,
+                    "review_status": review_status,  # current | due_soon | overdue | unknown
+                    "review_cycle_days": REVIEW_CYCLE_DAYS,
+                    # IEC 62304 §5.1.7 — change traceability
+                    "last_author": last_commit.get("author"),
+                    "last_commit_sha": last_commit.get("sha"),
+                    "last_commit_message": last_commit.get("message"),
+                    "last_commit_url": last_commit.get("github_url"),
+                    "freshness": freshness,
                 })
         return documents
 
