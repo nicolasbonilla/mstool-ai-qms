@@ -12,6 +12,9 @@ interface FormRecord {
   id: string; template_id: string; title: string; status: string; version: number;
   created_by: string; created_at: string; updated_at: string;
   fields: Record<string, string>; signatures: { user: string; role: string; signed_at: string }[];
+  // Forms drafted by the Autonomous Gap-Closer agent carry source metadata
+  source?: string;
+  source_meta?: { gap_key?: string; estimated_score_lift?: string; drafted_by_model?: string };
 }
 interface TemplateField { name: string; label: string; field_type: string; required: boolean; options?: string[]; section: string; help_text?: string }
 
@@ -205,7 +208,16 @@ export default function FormsPage() {
                     boxShadow: isSelected ? '0 4px 12px rgba(14,165,233,0.08)' : 'var(--card-shadow)',
                   }}>
                   <div className="flex items-center justify-between">
-                    <code className="text-[10px] font-mono font-bold" style={{ color: 'var(--accent-teal)' }}>{form.template_id}</code>
+                    <div className="flex items-center gap-1.5">
+                      <code className="text-[10px] font-mono font-bold" style={{ color: 'var(--accent-teal)' }}>{form.template_id}</code>
+                      {form.source === 'autonomous_gap_closer' && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+                          style={{ background: 'rgba(236,72,153,0.12)', color: '#EC4899' }}
+                          title={`Drafted by AI (${form.source_meta?.drafted_by_model || 'Claude'}) — needs human review${form.source_meta?.gap_key ? ` · closes gap: ${form.source_meta.gap_key}` : ''}`}>
+                          ✨ AI-drafted
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md inline-flex items-center gap-1"
                         style={{ background: cfg.bg, color: cfg.color }}>
@@ -220,6 +232,9 @@ export default function FormsPage() {
                   <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
                     {form.created_by || 'Unknown'} · {form.created_at ? new Date(form.created_at).toLocaleDateString() : ''}
                     {form.signatures.length > 0 && <span> · {form.signatures.length} signature{form.signatures.length > 1 ? 's' : ''}</span>}
+                    {form.source === 'autonomous_gap_closer' && form.source_meta?.estimated_score_lift && (
+                      <span> · estimated lift {form.source_meta.estimated_score_lift}</span>
+                    )}
                   </p>
                   {/* Workflow hint */}
                   <p className="text-[9px] font-medium mt-1.5" style={{ color: cfg.color }}>{cfg.next}</p>

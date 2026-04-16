@@ -38,8 +38,12 @@ steps:
       - '1'
       - '--max-instances'
       - '3'
-      - '--set-env-vars'
-      - 'GITHUB_REPO=nicolasbonilla/medical-imaging-viewer,GOOGLE_CLOUD_PROJECT=mstool-ai-qms'
+      # IMPORTANT: --update-env-vars preserves any env vars set out-of-band
+      # (e.g. ANTHROPIC_API_KEY configured via `gcloud run services update`),
+      # which --set-env-vars would silently delete. Bug we shipped twice
+      # before finding it — never go back to --set-env-vars here.
+      - '--update-env-vars'
+      - 'GITHUB_REPO=nicolasbonilla/medical-imaging-viewer,GOOGLE_CLOUD_PROJECT=mstool-ai-qms,QMS_FIREBASE_PROJECT=mstool-ai-qms'
 
 images:
   - 'gcr.io/$PROJECT_ID/mstool-ai-qms:$COMMIT_SHA'
