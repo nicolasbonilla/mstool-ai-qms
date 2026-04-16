@@ -61,8 +61,16 @@ class AuditPreparationAgent(BaseAgent):
     )
 
     def _run(self, context: Dict) -> AgentResult:
+        from app.agents.skills import load_skill
         client = get_anthropic_client()
         target_clause = context.get("clause") or "full"
+
+        # Load the 3 reference skills into the system prompt extension
+        skills_block = (
+            "\n\n=== IEC 62304 REFERENCE ===\n" + load_skill("iec62304", 6000)
+            + "\n\n=== ISO 14971 REFERENCE ===\n" + load_skill("iso14971", 4000)
+            + "\n\n=== SAMD BRAIN MRI REFERENCE ===\n" + load_skill("samd_brain_mri", 4000)
+        )
 
         # Build the evidence pack
         from app.services.compliance_service import ComplianceService
@@ -122,7 +130,7 @@ class AuditPreparationAgent(BaseAgent):
         message = client.messages.create(
             model=self.model_id,
             max_tokens=8000,
-            system=self.system_prompt,
+            system=self.system_prompt + skills_block,
             messages=[{"role": "user", "content": user_prompt}],
         )
         raw = message.content[0].text if message.content else "{}"

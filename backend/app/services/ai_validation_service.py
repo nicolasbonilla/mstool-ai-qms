@@ -174,23 +174,35 @@ class AIValidationService:
     """Run golden suite, persist results, generate dossier."""
 
     @staticmethod
-    def run_golden_suite_for_agent(agent_name: str, run_by_uid: str, run_by_email: str) -> Dict[str, Any]:
-        """Run the golden suite for one agent; return pass/fail per test."""
+    def run_golden_suite_for_agent(agent_name: str, run_by_uid: str,
+                                     run_by_email: str,
+                                     suite: str = "core") -> Dict[str, Any]:
+        """Run a golden suite for one agent; return pass/fail per test.
+
+        suite='core'     → small canary suite (fast, cheap, run on demand)
+        suite='extended' → broader parametric suite (more thorough, slower)
+        """
         if agent_name not in AGENT_REGISTRY:
             raise ValueError(f"Unknown agent: {agent_name}")
-        if agent_name not in GOLDEN_SUITE:
-            # If we haven't defined tests yet, return an empty-but-valid record
+
+        if suite == "extended":
+            from app.services.golden_suite_extended import EXTENDED_SUITE
+            tests = EXTENDED_SUITE.get(agent_name, [])
+        else:
+            tests = GOLDEN_SUITE.get(agent_name, [])
+
+        if not tests:
             return {
                 "agent_name": agent_name,
+                "suite": suite,
                 "tests": [],
                 "pass_count": 0,
                 "fail_count": 0,
-                "skipped_reason": "No golden suite defined for this agent yet",
+                "skipped_reason": f"No '{suite}' suite defined for this agent yet",
                 "run_at": datetime.now(timezone.utc).isoformat(),
             }
 
         agent = AGENT_REGISTRY[agent_name]
-        tests = GOLDEN_SUITE[agent_name]
         results = []
         passes = 0
         fails = 0
@@ -227,6 +239,7 @@ class AIValidationService:
 
         return {
             "agent_name": agent_name,
+            "suite": suite,
             "model_id": agent.model_id,
             "tier": agent.tier,
             "tests": results,

@@ -65,6 +65,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rate limiter — protects Claude API spend on agent invocations.
+# Defensive import: slowapi is a production-only dep; local dev without it
+# should still boot the app (rate limit decorators silently no-op).
+try:
+    from slowapi.errors import RateLimitExceeded
+    from slowapi import _rate_limit_exceeded_handler
+    from app.core.rate_limit import limiter
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+except ImportError:
+    logger.warning("slowapi not installed; rate limiting disabled (dev mode)")
+
 # WORM audit-trail middleware — records every mutation into the hash-chained
 # ledger (21 CFR Part 11 §11.10(e)). Must come AFTER CORS so CORS preflight
 # OPTIONS responses aren't logged.
@@ -74,7 +86,7 @@ app.add_middleware(AuditTrailMiddleware)
 # Routes
 from app.api.routes import (
     compliance, forms, users, traceability, audit, soup, ai,
-    system, activity, baselines, predict, webhooks,
+    system, activity, baselines, predict, webhooks, mcp,
     agents as agents_route,
 )
 
@@ -91,6 +103,7 @@ app.include_router(baselines.router, prefix=settings.API_V1_STR)
 app.include_router(agents_route.router, prefix=settings.API_V1_STR)
 app.include_router(predict.router, prefix=settings.API_V1_STR)
 app.include_router(webhooks.router, prefix=settings.API_V1_STR)
+app.include_router(mcp.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/", tags=["Health"])

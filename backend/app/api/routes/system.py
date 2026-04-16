@@ -89,6 +89,29 @@ async def sentinel_scan(days: int = 14,
     return scan_snapshots(history)
 
 
+@router.get("/usage")
+async def get_usage(user: CurrentUser = Depends(get_current_user)):
+    """Current rate-limit counters — surfaced to UI so users see remaining budget."""
+    from app.core.rate_limit import get_current_usage
+    return get_current_usage()
+
+
+@router.get("/scheduler/status")
+async def scheduler_status(user: CurrentUser = Depends(get_current_user)):
+    """Per-job leader-lease status: which instance owns it + last run."""
+    from app.core.firebase import get_firestore_client, Collections
+    db = get_firestore_client()
+    leases_col = (db.collection(Collections.SETTINGS)
+                    .document("scheduler_leases")
+                    .collection("jobs"))
+    out = []
+    for doc in leases_col.stream():
+        d = doc.to_dict() or {}
+        d["job_name"] = doc.id
+        out.append(d)
+    return {"jobs": out}
+
+
 @router.get("/alerts")
 async def list_alerts(only_open: bool = True,
                        user: CurrentUser = Depends(get_current_user)):

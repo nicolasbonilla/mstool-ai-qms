@@ -107,23 +107,63 @@ class BaseAgent(ABC):
 
     def run(self, context: dict, invoked_by_uid: str = "system",
             invoked_by_email: str = "system@mstool-ai-qms") -> dict:
-        """Public entrypoint — wraps _run with telemetry + persistence."""
+        """Public entrypoint — wraps _run with telemetry + persistence.
+
+        Adds the constitutional-classifier guardrail boundary:
+        1) Pre-screen the context (regex denylist for jailbreaks/PHI)
+        2) Execute the agent
+        3) Post-screen the output via Haiku constitutional classifier
+        4) Quarantine the result if classifier flags it as unsafe
+        """
+        from app.agents.guardrails import (
+            screen_input, classify_output, quarantine_result,
+        )
+
         start = time.monotonic()
         started_at = datetime.now(timezone.utc).isoformat()
         run_id_doc = None
-        try:
-            result = self._run(context)
-            status = "ok"
-            error = None
-        except Exception as e:
-            logger.exception(f"Agent {self.name} failed")
+        guardrail_meta = {"input_block": None, "output_classification": None}
+
+        # 1) Input screen — cheap regex denylist
+        ctx_text = " ".join(
+            str(v) for v in context.values() if isinstance(v, (str, int, float))
+        )
+        denial = screen_input(ctx_text)
+        if denial:
             result = AgentResult(
-                summary=f"Agent failed: {e}",
+                summary=f"Blocked at input boundary: {denial}",
+                findings=[],
                 requires_human_signoff=True,
                 confidence=0.0,
             )
-            status = "error"
-            error = str(e)
+            status = "blocked"
+            error = denial
+            guardrail_meta["input_block"] = denial
+        else:
+            try:
+                result = self._run(context)
+                status = "ok"
+                error = None
+            except Exception as e:
+                logger.exception(f"Agent {self.name} failed")
+                result = AgentResult(
+                    summary=f"Agent failed: {e}",
+                    requires_human_signoff=True,
+                    confidence=0.0,
+                )
+                status = "error"
+                error = str(e)
+
+            # 3) Output classifier — only when we have something to classify
+            if status == "ok" and (result.summary or result.findings):
+                verdict = classify_output(self.name, result)
+                guardrail_meta["output_classification"] = verdict
+                if not verdict.get("safe", True):
+                    logger.warning(
+                        f"Quarantining output of {self.name}: {verdict.get('reason')}"
+                    )
+                    result = quarantine_result(result, verdict.get("reason", "unsafe"))
+                    status = "quarantined"
 
         duration_ms = int((time.monotonic() - start) * 1000)
         completed_at = datetime.now(timezone.utc).isoformat()
@@ -140,6 +180,7 @@ class BaseAgent(ABC):
             "status": status,
             "error": error,
             "context": {k: v for k, v in context.items() if _is_json_safe(v)},
+            "guardrails": guardrail_meta,
             "result": {
                 "summary": result.summary,
                 "findings_count": len(result.findings),

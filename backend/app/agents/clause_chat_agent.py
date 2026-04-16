@@ -104,10 +104,15 @@ class ClauseChatAgent(BaseAgent):
             f"Structured context:\n{json.dumps(structured_context, indent=2, default=str)[:8000]}\n\n"
             "Produce the answer JSON described in the system prompt."
         )
+        from app.agents.skills import load_skill
+        skills_block = (
+            "\n\n=== IEC 62304 REFERENCE ===\n" + load_skill("iec62304", 4000)
+            + "\n\n=== ISO 14971 REFERENCE ===\n" + load_skill("iso14971", 3000)
+        )
         message = client.messages.create(
             model=self.model_id,
             max_tokens=2000,
-            system=self.system_prompt,
+            system=self.system_prompt + skills_block,
             messages=[{"role": "user", "content": user_prompt}],
         )
         raw = message.content[0].text if message.content else "{}"

@@ -128,6 +128,20 @@ class PRReviewerAgent(BaseAgent):
         ]
         # Blocking findings require sign-off
         has_blocking = any(f.get("level") == "blocking" for f in parsed.get("findings", []))
+        # Optional: publish to GitHub if context says so AND we have PR/SHA.
+        publish_meta = None
+        if context.get("publish_to_github") and (pr_number or context.get("head_sha")):
+            try:
+                from app.services.github_pr_writer import publish_pr_review
+                publish_meta = publish_pr_review(
+                    pr_number=pr_number,
+                    head_sha=context.get("head_sha"),
+                    agent_summary=parsed.get("summary", ""),
+                    findings=parsed.get("findings", []),
+                )
+            except Exception as e:
+                publish_meta = {"error": str(e)}
+
         return AgentResult(
             summary=parsed.get("summary", ""),
             findings=parsed.get("findings", []),
@@ -138,5 +152,6 @@ class PRReviewerAgent(BaseAgent):
             usage={
                 "input_tokens": getattr(message.usage, "input_tokens", 0),
                 "output_tokens": getattr(message.usage, "output_tokens", 0),
+                "github_publish": publish_meta,
             },
         )

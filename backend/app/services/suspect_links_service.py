@@ -102,13 +102,16 @@ def detect_suspect_links() -> Dict:
 def predict_missing_trace_links(top_k: int = 25, min_score: float = 0.18) -> Dict:
     """Suggest REQ↔test pairs that look related but have no edge yet.
 
-    Lexical jaccard over (req description tokens) ∪ (test_name tokens).
-    Replaceable with BGE embeddings + ANN once pgvector is wired.
+    Uses the semantic_search backend: real embeddings (sentence-transformers
+    MiniLM or fine-tuned BGE) when available, falls back to jaccard tokens
+    otherwise. The active backend is reported in the response so the UI can
+    show whether the user is seeing semantic or lexical results.
     """
-    gh = GitHubService()
+    from app.services.semantic_search import similarity_pairs, get_active_backend
+    gh = GitHubService()  # noqa: F841 - kept to ensure consistent caching
     trace = TraceabilityService().build_graph()
 
-    # Existing REQ → test edges
+    # Existing REQ → test pairs (transitive via code)
     edges = trace["edges"]
     existing_req_test_pairs: Set[tuple] = set()
     for e in edges:
@@ -120,34 +123,39 @@ def predict_missing_trace_links(top_k: int = 25, min_score: float = 0.18) -> Dic
     reqs = [n for n in trace["nodes"] if n["type"] == "requirement"]
     tests = [n for n in trace["nodes"] if n["type"] == "test"]
 
-    # Pre-tokenize
-    req_toks = {r["id"]: _tokenize((r.get("metadata") or {}).get("description", "") + " " + r["id"])
-                 for r in reqs}
-    test_toks = {t["id"]: _tokenize((t.get("metadata") or {}).get("tests_module", "") + " " + t["id"])
-                  for t in tests}
+    # Build text payload per node for the semantic backend
+    left = [{
+        "id": r["id"],
+        "text": (r.get("metadata") or {}).get("description", "") + " " + r["id"],
+    } for r in reqs]
+    right = [{
+        "id": t["id"],
+        "text": (t.get("metadata") or {}).get("tests_module", "") + " " + t["id"],
+    } for t in tests]
+
+    pairs = similarity_pairs(
+        left, right,
+        left_text_key="text", right_text_key="text",
+        min_score=min_score, top_k=top_k * 4,  # over-fetch then drop existing
+    )
 
     candidates = []
-    for r in reqs:
-        for t in tests:
-            if (r["id"], t["id"]) in existing_req_test_pairs:
-                continue
-            score = _jaccard(req_toks[r["id"]], test_toks[t["id"]])
-            if score < min_score:
-                continue
-            candidates.append({
-                "req_id": r["id"],
-                "test_id": t["id"],
-                "similarity": round(score, 3),
-                "method": "jaccard_token",
-                "rationale": "Token overlap suggests related concepts; verify and add explicit trace.",
-            })
-
-    candidates.sort(key=lambda c: c["similarity"], reverse=True)
-    candidates = candidates[:top_k]
+    for p in pairs:
+        if (p["left_id"], p["right_id"]) in existing_req_test_pairs:
+            continue
+        candidates.append({
+            "req_id": p["left_id"],
+            "test_id": p["right_id"],
+            "similarity": p["similarity"],
+            "method": p["method"],
+            "rationale": "Semantic similarity suggests these may be related; verify and add explicit trace.",
+        })
+        if len(candidates) >= top_k:
+            break
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "method": "jaccard token similarity (replaceable with BGE embeddings)",
+        "method": get_active_backend(),
         "predictions": candidates,
         "considered_pairs": len(reqs) * len(tests),
     }

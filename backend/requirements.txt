@@ -33,8 +33,17 @@ aiofiles==24.1.0
 # (avoids the need to enable Cloud Scheduler API on the GCP project)
 APScheduler==3.10.4
 
+# Rate limiting on AI agent invocations (Claude API cost protection)
+slowapi==0.1.9
+
 # Excel export for the CE Mark Submission Package (RTM matrix)
 openpyxl==3.1.5
+
+# Cryptographic signatures (21 CFR Part 11 §11.50 PKCS#7 detached sigs).
+# Cloud KMS does the actual signing; cryptography reassembles the PKCS#7
+# envelope locally so the verification path needs no GCP roundtrip.
+cryptography>=42.0.0
+google-cloud-kms>=3.0.0
 
 # PDF Generation
 reportlab==4.2.5

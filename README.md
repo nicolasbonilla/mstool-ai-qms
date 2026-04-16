@@ -16,6 +16,29 @@ An autonomous regulatory compliance platform that leverages **large language mod
 > **Production**: [mstool-ai-qms.web.app](https://mstool-ai-qms.web.app)  
 > **API**: [Cloud Run /api/docs](https://mstool-ai-qms-354942400159.us-central1.run.app/api/docs)  
 > **Monitored Device**: [app.mstool-ai.com](https://app.mstool-ai.com)
+>
+> 📚 **Operator docs**: [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) ·
+> [docs/USER_GUIDE.md](docs/USER_GUIDE.md) ·
+> [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+
+## Latest Capabilities (April 2026)
+
+| Capability | Surface | Backed by |
+|---|---|---|
+| **10 validated AI agents** | Agents page | Claude Haiku 4.5 / Sonnet 4.5 / Opus 4.6 |
+| **Constitutional Classifier guardrails** | Every agent run | Haiku safety classifier on output |
+| **AI Validation Dossier (IQ/OQ/PQ + PCCP)** | Insights → Download | FDA PCCP Final Guidance Aug 2025 |
+| **Drift Canary suite** | Agents page → "Run canaries" | Weekly cron + Firestore-backed history |
+| **PCCP Generator** | Agents page → "Generate PCCP" | Opus 4.6 supervisor over agent inventory |
+| **Agent Skills bundles** | `backend/app/agents/skills/` | Anthropic Agent Skills pattern |
+| **MCP Gateway (IDE integration)** | `/api/v1/mcp` | JSON-RPC 2.0; 7 tools exposed |
+| **Cryptographic e-signatures** | Releases → Sign | Cloud KMS RSA-PSS-SHA256 (HMAC fallback) |
+| **GitHub PR auto-review** | Webhooks → PR Reviewer agent | Posts comment + check run on PR open/sync |
+| **WORM ledger with hash chain** | Activity page | Firestore transaction-based prev_hash + content_hash |
+| **In-process scheduler with leader election** | `/system/scheduler/status` | APScheduler + Firestore leases |
+| **Rate limiting (slowapi + Firestore caps)** | `/api/v1/agents/*/invoke` | Per-user/min, per-user/day, global/hour |
+| **Real Dashboard with 5 charts** | Dashboard | Recharts: trend, radial, CI bars, heatmap, sparklines |
+| **CE Mark Submission Package ZIP** | Releases → Export | One-click bundle for FDA / Notified Body |
 
 ---
 

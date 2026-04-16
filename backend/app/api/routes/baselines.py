@@ -82,6 +82,43 @@ async def diff_baselines(v_from: str, v_to: str,
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@router.get("/{version_tag}/verify-signatures")
+async def verify_baseline_signatures(version_tag: str,
+                                       user: CurrentUser = Depends(get_current_user)):
+    """Verify every signature attached to this baseline.
+
+    Returns per-signature {valid, reason, method}. A failed verify means
+    either tampering or the signing key has been rotated without a new
+    signature being attached.
+    """
+    from app.services.esign_service import verify_signature
+    snap = BaselineService.get_baseline(version_tag)
+    if snap is None:
+        raise HTTPException(status_code=404, detail="Baseline not found")
+    payload = {
+        "version_tag": snap.get("version_tag"),
+        "hash": snap.get("hash"),
+        "created_at": snap.get("created_at"),
+        "compliance": snap.get("compliance"),
+    }
+    results = []
+    for sig in snap.get("signatures", []):
+        # Modern signatures carry content_hash_sha256; old ones don't.
+        if "content_hash_sha256" in sig:
+            results.append({
+                "signer": sig.get("signer_email"),
+                "verified": verify_signature(payload, sig),
+            })
+        else:
+            results.append({
+                "signer": sig.get("signer_email"),
+                "verified": {"valid": False,
+                              "reason": "Legacy text-only signature (pre-KMS)",
+                              "method": "legacy"},
+            })
+    return {"version_tag": version_tag, "signatures": results}
+
+
 @router.get("/{version_tag}/submission-package")
 async def export_submission_package(version_tag: str,
                                        user: CurrentUser = Depends(require_editor)):

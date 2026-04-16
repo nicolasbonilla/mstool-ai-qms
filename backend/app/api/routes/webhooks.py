@@ -107,6 +107,37 @@ async def github_webhook(request: Request):
                     "reason": str(e),
                 })
 
+    elif event == "pull_request":
+        action = payload.get("action")
+        pr = payload.get("pull_request") or {}
+        if action in ("opened", "synchronize", "reopened") and pr.get("number"):
+            try:
+                from app.agents.registry import get_agent
+                pr_reviewer = get_agent("pr_reviewer")
+                run_record = pr_reviewer.run(
+                    context={
+                        "pr_number": pr["number"],
+                        "head_sha": (pr.get("head") or {}).get("sha"),
+                        "publish_to_github": True,
+                    },
+                    invoked_by_uid="webhook:github",
+                    invoked_by_email="github-actions@mstool-ai-qms",
+                )
+                response["actions_taken"].append({
+                    "type": "pr_reviewer_invoked",
+                    "pr_number": pr["number"],
+                    "agent_run_id": run_record.get("id"),
+                    "github_publish": run_record.get("result", {})
+                                         .get("usage", {}).get("github_publish"),
+                })
+            except Exception as e:
+                logger.warning(f"PR reviewer auto-invocation failed: {e}")
+                response["actions_taken"].append({
+                    "type": "pr_reviewer_failed",
+                    "pr_number": pr["number"],
+                    "reason": str(e),
+                })
+
     # Always log the inbound webhook into the WORM ledger
     FirestoreService.log_action(
         user_uid="webhook:github",

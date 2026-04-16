@@ -170,25 +170,36 @@ class BaselineService:
                       role: str, meaning: str = "approved") -> Optional[Dict[str, Any]]:
         """Append a 21 CFR Part 11 §11.50 electronic signature to a baseline.
 
-        Signatures include: signer identity, role at time of signing, datetime,
-        and meaning (approval / review / witness). A baseline may have multiple
-        signatures; the first "approved" signature transitions status → signed.
+        Now produces a cryptographic signature (Cloud KMS RSA-PSS-SHA256
+        when configured; HMAC-SHA256 dev fallback). The signature binds to
+        the baseline's hash so any tampering with the baseline content
+        invalidates every signature on it.
         """
+        from app.services.esign_service import sign_payload
+
         db = BaselineService._db()
         doc_ref = db.collection(Collections.BASELINES).document(version_tag)
         snap = doc_ref.get()
         if not snap.exists:
             return None
         data = snap.to_dict()
-        sig = {
-            "signer_uid": signer_uid,
-            "signer_email": signer_email,
-            "signer_role": role,
-            "signed_at": datetime.now(timezone.utc).isoformat(),
-            "meaning": meaning,
+
+        # Sign the canonical baseline (excluding the signatures list to avoid
+        # circular dependency — each new signer signs the same content)
+        payload_to_sign = {
+            "version_tag": data.get("version_tag"),
+            "hash": data.get("hash"),
+            "created_at": data.get("created_at"),
+            "compliance": data.get("compliance"),
         }
+        sig_record = sign_payload(
+            payload=payload_to_sign,
+            signer_uid=signer_uid, signer_email=signer_email,
+            signer_role=role, meaning=meaning,
+        )
+
         signatures = list(data.get("signatures", []))
-        signatures.append(sig)
+        signatures.append(sig_record)
         updates = {"signatures": signatures}
         if meaning == "approved" and data.get("status") == "draft":
             updates["status"] = "signed"

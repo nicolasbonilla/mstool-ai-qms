@@ -2,8 +2,12 @@ import { useEffect, useState } from 'react';
 import {
   Sparkles, Play, CheckCircle2, AlertTriangle, Clock, Cpu, ExternalLink,
   ShieldCheck, X, GitBranch, Package, FileCode, FileText,
+  MessageSquare, ClipboardCheck, Shield, Globe, Wand2, BookOpen, Plug, Activity,
 } from 'lucide-react';
-import { listAgents, invokeAgent, listAgentRuns, approveAgentRun, AgentMeta } from '../api/agents';
+import {
+  listAgents, invokeAgent, listAgentRuns, approveAgentRun, AgentMeta,
+  listSkills, listMcpTools, runCanary, getDriftHistory, generatePCCP,
+} from '../api/agents';
 import PageSkeleton from '../components/ui/PageSkeleton';
 
 /* ─── Types ─── */
@@ -38,6 +42,11 @@ const AGENT_ICONS: Record<string, any> = {
   pr_reviewer: FileCode,
   doc_drift: FileText,
   capa_drafter: AlertTriangle,
+  clause_chat: MessageSquare,
+  audit_prep: ClipboardCheck,
+  risk_analyst: Shield,
+  regulatory_watch: Globe,
+  autonomous_gap_closer: Wand2,
 };
 
 const TIER_META: Record<string, { color: string; label: string }> = {
@@ -68,24 +77,71 @@ const formatDate = (iso: string): string =>
 export default function AgentsPage() {
   const [agents, setAgents] = useState<AgentMeta[]>([]);
   const [runs, setRuns] = useState<Record<string, AgentRun[]>>({});
+  const [skills, setSkills] = useState<any[]>([]);
+  const [mcpTools, setMcpTools] = useState<any[]>([]);
+  const [driftHistory, setDriftHistory] = useState<any[]>([]);
+  const [running, setRunning] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [invoking, setInvoking] = useState<string | null>(null);
   const [selected, setSelected] = useState<AgentRun | null>(null);
 
   const load = async () => {
-    const r = await listAgents();
-    setAgents(r.data.agents);
+    const safe = <T,>(p: Promise<T>): Promise<T | null> => p.catch(() => null);
+
+    const [a, sk, mt, dh] = await Promise.all([
+      safe(listAgents()),
+      safe(listSkills()),
+      safe(listMcpTools()),
+      safe(getDriftHistory(undefined, 20)),
+    ]);
+    if (a) setAgents(a.data.agents);
+    if (sk) setSkills(sk.data.skills || []);
+    if (mt) setMcpTools(mt.data.tools || []);
+    if (dh) setDriftHistory(dh.data.history || []);
+
+    if (!a) return;
     // Load last 5 runs per agent
     const runMap: Record<string, AgentRun[]> = {};
-    await Promise.all(r.data.agents.map(async a => {
+    await Promise.all(a.data.agents.map(async (ag: AgentMeta) => {
       try {
-        const rr = await listAgentRuns(a.name, 5);
-        runMap[a.name] = rr.data.runs;
+        const rr = await listAgentRuns(ag.name, 5);
+        runMap[ag.name] = rr.data.runs;
       } catch {
-        runMap[a.name] = [];
+        runMap[ag.name] = [];
       }
     }));
     setRuns(runMap);
+  };
+
+  const handleCanaryRun = async () => {
+    setRunning('canary');
+    try {
+      await runCanary();
+      await load();
+    } catch (e: any) {
+      alert(e.response?.data?.detail || 'Canary run failed');
+    } finally {
+      setRunning(null);
+    }
+  };
+
+  const handlePCCP = async () => {
+    setRunning('pccp');
+    try {
+      const r = await generatePCCP();
+      const blob = new Blob([JSON.stringify(r.data, null, 2)],
+                             { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pccp-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert(e.response?.data?.detail || 'PCCP generation failed');
+    } finally {
+      setRunning(null);
+    }
   };
 
   useEffect(() => {
@@ -148,11 +204,92 @@ export default function AgentsPage() {
             </p>
           </div>
         </div>
-        <a href="/docs/MASTER_PLAN.md" target="_blank" rel="noopener"
-          className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
-          style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
-          Master Plan <ExternalLink size={11} />
-        </a>
+        <div className="flex items-center gap-2">
+          <button onClick={handleCanaryRun} disabled={running === 'canary'}
+            className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-80 disabled:opacity-50"
+            style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+            <Activity size={11} /> {running === 'canary' ? 'Running canaries…' : 'Run canaries'}
+          </button>
+          <button onClick={handlePCCP} disabled={running === 'pccp'}
+            className="flex items-center gap-1.5 text-[11px] font-semibold text-white px-3 py-1.5 rounded-lg transition-all hover:opacity-80 disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)' }}>
+            <FileText size={11} /> {running === 'pccp' ? 'Drafting…' : 'Generate PCCP'}
+          </button>
+        </div>
+      </div>
+
+      {/* ═══ Skills + MCP tools + Drift compact summary ═══ */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        {/* Skills */}
+        <div className="rounded-2xl p-4" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <BookOpen size={13} style={{ color: '#10B981' }} />
+            <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>Skills loaded by agents</span>
+          </div>
+          {skills.length === 0 && <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>No skills found.</p>}
+          <div className="space-y-1.5">
+            {skills.map(s => (
+              <div key={s.name} className="rounded-lg p-2" style={{ background: 'var(--bg-tertiary)' }}>
+                <div className="flex items-center gap-1.5">
+                  <code className="text-[10px] font-mono font-bold" style={{ color: '#10B981' }}>{s.name}</code>
+                  <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>{s.files?.length || 0} files</span>
+                </div>
+                <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>{s.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* MCP tools */}
+        <div className="rounded-2xl p-4" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Plug size={13} style={{ color: '#0EA5E9' }} />
+            <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>MCP tools (IDE integration)</span>
+            <span className="ml-auto text-[9px] font-mono" style={{ color: 'var(--text-muted)' }}>{mcpTools.length}</span>
+          </div>
+          <p className="text-[9px] mb-2" style={{ color: 'var(--text-muted)' }}>
+            POST /api/v1/mcp with JSON-RPC 2.0 envelope from any MCP-aware client.
+          </p>
+          <div className="space-y-1">
+            {mcpTools.slice(0, 8).map((t: any) => (
+              <div key={t.name} className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
+                <code className="font-mono font-bold" style={{ color: '#0EA5E9' }}>{t.name}</code>
+                <span className="ml-1.5" style={{ color: 'var(--text-muted)' }}>— {t.description}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Drift snapshots */}
+        <div className="rounded-2xl p-4" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Activity size={13} style={{ color: '#F59E0B' }} />
+            <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>Recent drift canary runs</span>
+            <span className="ml-auto text-[9px] font-mono" style={{ color: 'var(--text-muted)' }}>{driftHistory.length}</span>
+          </div>
+          {driftHistory.length === 0 && (
+            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+              No canary runs yet. Click "Run canaries" above.
+            </p>
+          )}
+          <div className="space-y-1">
+            {driftHistory.slice(0, 6).map((d: any) => {
+              const drift = d.drift_eval?.is_drift;
+              return (
+                <div key={d.id} className="flex items-center gap-1.5 text-[10px]">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: drift ? '#EF4444' : '#10B981' }} />
+                  <code className="font-mono" style={{ color: 'var(--text-secondary)' }}>{d.agent_name}</code>
+                  <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                    sim={d.drift_eval?.jaccard_similarity ?? '—'}
+                  </span>
+                  <span className="ml-auto text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                    {d.captured_at ? new Date(d.captured_at).toLocaleDateString() : ''}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* ═══ Agent grid ═══ */}

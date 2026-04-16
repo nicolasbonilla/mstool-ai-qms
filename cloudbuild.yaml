@@ -33,11 +33,17 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--memory'
-      - '512Mi'
+      - '1Gi'
       - '--cpu'
       - '1'
       - '--max-instances'
       - '3'
+      # min-instances=1 keeps APScheduler alive overnight so the hourly
+      # snapshot, daily SOUP scan, and weekly drift canary actually run
+      # even if no human opens the app. Cost: ~$10/month vs unbounded
+      # reliability win.
+      - '--min-instances'
+      - '1'
       # IMPORTANT: --update-env-vars preserves any env vars set out-of-band
       # (e.g. ANTHROPIC_API_KEY configured via `gcloud run services update`),
       # which --set-env-vars would silently delete. Bug we shipped twice
