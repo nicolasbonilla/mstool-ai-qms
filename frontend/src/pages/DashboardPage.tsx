@@ -1,8 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Area, AreaChart, ResponsiveContainer } from 'recharts';
+import {
+  Area, AreaChart, Line, LineChart, BarChart, Bar,
+  RadialBarChart, RadialBar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  ReferenceLine, Legend, Cell,
+} from 'recharts';
 import { getDetailedScore, getCommits, getCIRuns, getCheckEvidence, getScoreHistory } from '../api/compliance';
 import { getAuditHistory } from '../api/audit';
+import { getActivitySummary } from '../api/activity';
 import {
   Activity, Shield, Lock, AlertTriangle, ExternalLink,
   GitCommit, CheckCircle2, XCircle, Clock, ChevronRight, ChevronDown,
@@ -78,6 +84,8 @@ export default function DashboardPage() {
   const [lastAuditScore, setLastAuditScore] = useState<number | null>(null);
   const [lastAuditDate, setLastAuditDate] = useState<Date | null>(null);
   const [scoreSparkline, setScoreSparkline] = useState<{ t: string; v: number }[]>([]);
+  const [scoreHistory, setScoreHistory] = useState<any[]>([]);
+  const [activityByDay, setActivityByDay] = useState<Record<string, number>>({});
   const [expandedArea, setExpandedArea] = useState<string | null>(null);
   const [expandedCheck, setExpandedCheck] = useState<string | null>(null);
   const [deepEvidence, setDeepEvidence] = useState<Record<string, any>>({});
@@ -92,12 +100,13 @@ export default function DashboardPage() {
 
     Promise.all([
       safe(getDetailedScore()),
-      safe(getCommits(6)),
-      safe(getCIRuns(5)),
+      safe(getCommits(15)),
+      safe(getCIRuns(15)),
       safe(getAuditHistory(10)),
       safe(getScoreHistory(30)),
+      safe(getActivitySummary(14)),
     ])
-      .then(([s, c, r, h, hist]) => {
+      .then(([s, c, r, h, hist, act]) => {
         if (s) setData(s.data);
         if (c) setCommits(c.data.commits || []);
         if (r) setCi(r.data.ci_runs || []);
@@ -109,13 +118,16 @@ export default function DashboardPage() {
           }
         }
         if (hist) {
+          const rows = hist.data.history || [];
+          setScoreHistory(rows);
           setScoreSparkline(
-            (hist.data.history || []).map((row: any) => ({
+            rows.map((row: any) => ({
               t: row.timestamp,
               v: row.scores?.ce_mark_overall ?? 0,
             }))
           );
         }
+        if (act) setActivityByDay(act.data.by_day || {});
       })
       .finally(() => setLoading(false));
   }, []);
@@ -135,6 +147,45 @@ export default function DashboardPage() {
     }
   };
 
+  // Chart data prep — compute outside render so we don't recompute every paint
+  const trendChartData = useMemo(() => {
+    return scoreHistory.map((s: any) => ({
+      label: new Date(s.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      ce_mark: s.scores?.ce_mark_overall ?? null,
+      iec62304: s.scores?.iec62304 ?? null,
+      iso13485: s.scores?.iso13485 ?? null,
+      cybersecurity: s.scores?.cybersecurity ?? null,
+    }));
+  }, [scoreHistory]);
+
+  const ciChartData = useMemo(() => {
+    // Reverse so newest is on the right (chronological)
+    return [...ci].reverse().map((r) => ({
+      label: r.head_sha,
+      success: r.conclusion === 'success' ? 1 : 0,
+      failure: r.conclusion === 'failure' ? 1 : 0,
+      other: r.conclusion && r.conclusion !== 'success' && r.conclusion !== 'failure' ? 1 : 0,
+      conclusion: r.conclusion,
+    }));
+  }, [ci]);
+
+  const activityHeatmapData = useMemo(() => {
+    // Build last 14 days timeline with counts
+    const days: { label: string; count: number; fullDate: string }[] = [];
+    const now = new Date();
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      days.push({
+        fullDate: key,
+        label: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        count: activityByDay[key] || 0,
+      });
+    }
+    return days;
+  }, [activityByDay]);
+
   if (loading) return <DashboardSkeleton />;
   if (!data) return null;
 
@@ -142,6 +193,16 @@ export default function DashboardPage() {
   const totalPass = data.checks.filter(c => c.status === 'pass').length;
   const totalChecks = data.checks.length;
   const ceScore = data.scores.ce_mark_overall;
+
+  // Per-check radial bar data — for the Score Breakdown chart
+  const radialData = data.checks.map(c => ({
+    name: c.title,
+    value: Math.round(c.score * 10) / 10,
+    fill: c.score >= 90 ? '#10B981' : c.score >= 70 ? '#F59E0B' : '#EF4444',
+  }));
+
+  // Activity heatmap max for color scaling
+  const maxDayCount = Math.max(1, ...activityHeatmapData.map(d => d.count));
   const actionChecks = data.checks.filter(c => c.action);
   // Only the LATEST CI run matters for urgency — historical failures are resolved
   const latestCI = ci.length > 0 ? ci[0] : null;
@@ -330,6 +391,130 @@ export default function DashboardPage() {
       )}
 
       {/* ═══════════════════════════════════════════════
+          SECTION 2.5 — CHARTS (the actual "dashboard" part)
+          Per our research: dashboard literally means panels with
+          gauges + temporal trends. References:
+          - Shneiderman's Mantra (overview → zoom → details-on-demand)
+          - GoodData 6 Principles (hierarchy + grouping + labeling)
+          - Jama Trace Scores trend lines + MasterControl Insights
+          - DORA 2025 reliability metrics (time-series KPIs)
+          ═══════════════════════════════════════════════ */}
+      {trendChartData.length > 1 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Main trend chart — 4 lines, large */}
+          <div className="lg:col-span-2 rounded-2xl p-4"
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>Compliance score over time</p>
+                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                  Hourly snapshots — last 30 days · 4 metrics overlayed
+                </p>
+              </div>
+              <button onClick={() => navigate('/trends')}
+                className="text-[10px] font-semibold px-2 py-1 rounded-lg transition-all hover:opacity-80"
+                style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                Open Trends →
+              </button>
+            </div>
+            <div style={{ height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendChartData} margin={{ top: 5, right: 16, left: -12, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                  <XAxis dataKey="label" stroke="var(--text-muted)" style={{ fontSize: 9 }} interval="preserveStartEnd" />
+                  <YAxis domain={[0, 100]} stroke="var(--text-muted)" style={{ fontSize: 9 }} />
+                  <Tooltip
+                    contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)', borderRadius: 8, fontSize: 11 }}
+                    labelStyle={{ color: 'var(--text-primary)', fontWeight: 600 }} />
+                  <Legend wrapperStyle={{ fontSize: 10, paddingTop: 6 }} />
+                  <ReferenceLine y={95} stroke="#10B981" strokeDasharray="4 4"
+                    label={{ value: 'Target 95%', position: 'right', fill: '#10B981', fontSize: 8 }} />
+                  <Line type="monotone" dataKey="ce_mark" name="CE Mark" stroke="#0EA5E9" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="iec62304" name="IEC 62304" stroke="#10B981" strokeWidth={1.8} dot={false} activeDot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="iso13485" name="ISO 13485" stroke="#8B5CF6" strokeWidth={1.8} dot={false} activeDot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="cybersecurity" name="Cybersec" stroke="#F59E0B" strokeWidth={1.8} dot={false} activeDot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Score breakdown — radial bars */}
+          <div className="rounded-2xl p-4"
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+            <p className="text-[12px] font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Check breakdown</p>
+            <div style={{ height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <RadialBarChart innerRadius="20%" outerRadius="100%" data={radialData} startAngle={90} endAngle={-270}>
+                  <RadialBar dataKey="value" cornerRadius={4} background={{ fill: 'var(--bg-tertiary)' }}>
+                    {radialData.map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                  </RadialBar>
+                  <Tooltip
+                    contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)', borderRadius: 8, fontSize: 11 }}
+                    formatter={(value: any) => `${value}%`} />
+                </RadialBarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-2 gap-1 mt-1 text-[9px]">
+              {radialData.map(r => (
+                <div key={r.name} className="flex items-center gap-1 truncate" style={{ color: 'var(--text-muted)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: r.fill }} />
+                  <span className="truncate">{r.name}: {r.value}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CI runs bar chart */}
+          <div className="rounded-2xl p-4"
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+            <p className="text-[12px] font-bold mb-2" style={{ color: 'var(--text-primary)' }}>CI runs (last 15)</p>
+            <div style={{ height: 130 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={ciChartData} margin={{ top: 5, right: 5, left: -28, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                  <XAxis dataKey="label" stroke="var(--text-muted)" style={{ fontSize: 8 }} interval={0} angle={-45} textAnchor="end" height={40} />
+                  <YAxis hide />
+                  <Tooltip
+                    contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--border-default)', borderRadius: 8, fontSize: 11 }}
+                    formatter={(value: any, name: any) => [value, name]} />
+                  <Bar dataKey="success" stackId="a" fill="#10B981" />
+                  <Bar dataKey="failure" stackId="a" fill="#EF4444" />
+                  <Bar dataKey="other" stackId="a" fill="#F59E0B" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Activity heatmap — last 14 days */}
+          <div className="lg:col-span-2 rounded-2xl p-4"
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>Activity (last 14 days)</p>
+              <button onClick={() => navigate('/activity')}
+                className="text-[10px] font-semibold px-2 py-1 rounded-lg transition-all hover:opacity-80"
+                style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                Open Activity →
+              </button>
+            </div>
+            <div className="flex items-end gap-1.5 h-[100px]">
+              {activityHeatmapData.map(d => {
+                const h = d.count === 0 ? 4 : Math.max(8, (d.count / maxDayCount) * 100);
+                const intensity = d.count === 0 ? 0.15 : 0.4 + (d.count / maxDayCount) * 0.6;
+                return (
+                  <div key={d.fullDate} className="flex-1 flex flex-col items-center gap-1" title={`${d.fullDate}: ${d.count} entries`}>
+                    <div className="w-full rounded-t transition-all" style={{ height: `${h}%`, background: 'var(--accent-teal)', opacity: intensity }} />
+                    <span className="text-[8px] font-mono whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{d.label.slice(0, 6)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════
           SECTION 3 — COMPLIANCE AREAS
           Answers: "Where are the problems?"
           Grouped by standard (IEC 62304, ISO 13485, IEC 81001-5-1)
@@ -375,6 +560,17 @@ export default function DashboardPage() {
                         style={{ background: c.status === 'pass' ? '#10B981' : c.status === 'warn' ? '#F59E0B' : '#EF4444' }} />
                     ))}
                   </div>
+
+                  {/* Per-area sparkline */}
+                  {scoreHistory.length > 1 && (
+                    <div style={{ width: 80, height: 28 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={scoreHistory.map((s: any) => ({ v: s.scores?.[area.id === 'lifecycle' ? 'iec62304' : area.id === 'quality' ? 'iso13485' : 'cybersecurity'] ?? 0 }))}>
+                          <Area type="monotone" dataKey="v" stroke={area.color} strokeWidth={1.5} fill={area.color} fillOpacity={0.2} dot={false} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
 
                   {/* Score */}
                   <span className="text-[20px] font-extrabold tabular-nums" style={{ color: areaScore >= 90 ? '#10B981' : areaScore >= 70 ? '#F59E0B' : '#EF4444' }}>
