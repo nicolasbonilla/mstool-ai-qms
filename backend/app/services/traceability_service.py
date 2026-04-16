@@ -114,10 +114,170 @@ class TraceabilityService:
                     if e2["target"] == e["source"] and e2["source"] in req_ids:
                         reqs_with_tests.add(e2["source"])
 
+        # Build per-requirement reverse lookup: which code/tests/risks reference it?
+        req_to_code: Dict[str, List[str]] = {r: [] for r in req_ids}
+        req_to_tests: Dict[str, List[str]] = {r: [] for r in req_ids}
+        req_to_risks: Dict[str, List[str]] = {r: [] for r in req_ids}
+        code_to_tests: Dict[str, List[str]] = {c: [] for c in code_ids}
+
+        for e in edges:
+            if e["type"] == "implemented_by" and e["source"] in req_ids and e["target"] in code_ids:
+                req_to_code[e["source"]].append(e["target"])
+            if e["type"] == "tested_by" and e["source"] in code_ids and e["target"] in test_ids:
+                code_to_tests[e["source"]].append(e["target"])
+            if e["type"] == "mitigated_by" and e["source"] in req_ids and e["target"] in risk_ids:
+                req_to_risks[e["source"]].append(e["target"])
+
+        # Compute REQ → Test (transitive through code)
+        for req_id, code_list in req_to_code.items():
+            for code_id in code_list:
+                req_to_tests[req_id].extend(code_to_tests.get(code_id, []))
+            req_to_tests[req_id] = list(set(req_to_tests[req_id]))
+
+        # ─── Enriched orphans with reasoning + suggested actions ───
+        req_meta = {r["id"]: r for r in reqs}
+        risk_meta = {r["id"]: r for r in risks}
+        code_meta = {c["id"]: c for c in code_modules}
+
+        def req_category(req_id: str) -> str:
+            parts = req_id.split("-")
+            return parts[1] if len(parts) > 1 else "FUNC"
+
+        def req_safety_class(req_id: str) -> str:
+            cat = req_category(req_id)
+            # SAFE/PERF reqs touching Class C modules → critical
+            if cat in ("SAFE", "PERF"):
+                return "C"
+            if cat == "SEC":
+                return "B"
+            return "A"
+
+        # Orphans enriched
+        orphan_reqs_no_tests = []
+        for rid in sorted(req_ids - reqs_with_tests):
+            meta = req_meta.get(rid, {})
+            has_code = len(req_to_code.get(rid, [])) > 0
+            orphan_reqs_no_tests.append({
+                "id": rid,
+                "description": meta.get("description", "")[:120],
+                "category": req_category(rid),
+                "safety_class": req_safety_class(rid),
+                "has_code_implementation": has_code,
+                "code_modules": req_to_code.get(rid, []),
+                "reason": (
+                    "Implemented in code but no test verifies it"
+                    if has_code else
+                    "No code implementation AND no test — requirement may be unimplemented"
+                ),
+                "suggested_form": "TPL-04",  # Test Protocol
+                "standard_ref": "IEC 62304 §5.5 + §5.6",
+            })
+
+        orphan_risks_no_verif = []
+        for rid in sorted(risk_ids - verified_risks):
+            meta = risk_meta.get(rid, {})
+            orphan_risks_no_verif.append({
+                "id": rid,
+                "description": meta.get("description", "")[:120],
+                "reason": "Risk control has no traced requirement implementing or verifying it",
+                "suggested_form": "TPL-08",  # Risk Verification Record
+                "standard_ref": "ISO 14971 §7.3 (verification of implementation + effectiveness)",
+            })
+
+        orphan_code_no_reqs = []
+        for cid in sorted(code_ids - code_with_reqs):
+            meta = code_meta.get(cid, {})
+            path = meta.get("path", "")
+            is_class_c = any(c in path for c in ["ai_segmentation", "brain_volumetry", "brain_report",
+                                                    "lesion_analysis", "ms_region_classifier", "nifti_utils",
+                                                    "dicom_utils", "edgeAI"])
+            orphan_code_no_reqs.append({
+                "id": cid,
+                "path": path,
+                "is_class_c": is_class_c,
+                "reason": (
+                    "Class C module without explicit REQ-XXX-XXX comment trace — auditor will flag"
+                    if is_class_c else
+                    "Module has no REQ-XXX-XXX reference in source"
+                ),
+                "suggested_form": "TPL-02",  # Code Review record
+                "standard_ref": "IEC 62304 §5.2.6 + §5.3",
+            })
+
         orphans = {
-            "requirements_without_tests": sorted(req_ids - reqs_with_tests),
-            "risk_controls_without_verification": sorted(risk_ids - verified_risks),
-            "code_without_requirements": sorted(code_ids - code_with_reqs),
+            "requirements_without_tests": orphan_reqs_no_tests,
+            "risk_controls_without_verification": orphan_risks_no_verif,
+            "code_without_requirements": orphan_code_no_reqs,
+        }
+
+        # ─── Coverage metrics (bidirectional, ISO 14971 + IEC 62304) ───
+        forward_pct = round((len(reqs_with_tests) / len(req_ids)) * 100, 1) if req_ids else 0
+        # Backward: of all tests, how many trace back to a requirement?
+        tests_with_reqs = set()
+        for tid in test_ids:
+            for e in edges:
+                if e["type"] == "tested_by" and e["target"] == tid:
+                    code_id = e["source"]
+                    for e2 in edges:
+                        if e2["type"] == "implemented_by" and e2["target"] == code_id and e2["source"] in req_ids:
+                            tests_with_reqs.add(tid)
+                            break
+        backward_pct = round((len(tests_with_reqs) / len(test_ids)) * 100, 1) if test_ids else 0
+
+        risk_coverage_pct = round((len(verified_risks) / len(risk_ids)) * 100, 1) if risk_ids else 0
+        code_coverage_pct = round((len(code_with_reqs) / len(code_ids)) * 100, 1) if code_ids else 0
+
+        # ─── Coverage by category (FUNC, SAFE, PERF, SEC) ───
+        coverage_by_category: Dict[str, Dict[str, int]] = {}
+        for rid in req_ids:
+            cat = req_category(rid)
+            if cat not in coverage_by_category:
+                coverage_by_category[cat] = {
+                    "total": 0,
+                    "with_code": 0,
+                    "with_tests": 0,
+                    "with_risk_link": 0,
+                }
+            coverage_by_category[cat]["total"] += 1
+            if len(req_to_code.get(rid, [])) > 0:
+                coverage_by_category[cat]["with_code"] += 1
+            if rid in reqs_with_tests:
+                coverage_by_category[cat]["with_tests"] += 1
+            if len(req_to_risks.get(rid, [])) > 0:
+                coverage_by_category[cat]["with_risk_link"] += 1
+
+        # ─── RTM rows (audit-ready tabular matrix per FDA Premarket guidance) ───
+        rtm_rows = []
+        for rid in sorted(req_ids):
+            meta = req_meta.get(rid, {})
+            code_list = req_to_code.get(rid, [])
+            test_list = req_to_tests.get(rid, [])
+            risk_list = req_to_risks.get(rid, [])
+            status = "complete" if (code_list and test_list) else "partial" if (code_list or test_list) else "uncovered"
+            rtm_rows.append({
+                "req_id": rid,
+                "description": meta.get("description", "")[:140],
+                "category": req_category(rid),
+                "safety_class": req_safety_class(rid),
+                "code_modules": [c.replace("CODE-", "") for c in code_list[:3]],
+                "code_count": len(code_list),
+                "tests": [t.replace("TEST-", "") for t in test_list[:3]],
+                "test_count": len(test_list),
+                "risk_controls": risk_list[:3],
+                "risk_count": len(risk_list),
+                "status": status,  # complete | partial | uncovered
+            })
+
+        coverage_metrics = {
+            "forward_pct": forward_pct,
+            "backward_pct": backward_pct,
+            "risk_coverage_pct": risk_coverage_pct,
+            "code_coverage_pct": code_coverage_pct,
+            "tests_with_reqs": len(tests_with_reqs),
+            "tests_total": len(test_ids),
+            "reqs_with_tests": len(reqs_with_tests),
+            "reqs_total": len(req_ids),
+            "audit_readiness": "ready" if (forward_pct >= 90 and backward_pct >= 80) else "needs_work" if forward_pct >= 70 else "not_ready",
         }
 
         stats = {
@@ -128,9 +288,9 @@ class TraceabilityService:
             "code_modules": len(code_ids),
             "tests": len(test_ids),
             "risk_controls": len(risk_ids),
-            "orphan_requirements": len(orphans["requirements_without_tests"]),
-            "orphan_risks": len(orphans["risk_controls_without_verification"]),
-            "orphan_code": len(orphans["code_without_requirements"]),
+            "orphan_requirements": len(orphan_reqs_no_tests),
+            "orphan_risks": len(orphan_risks_no_verif),
+            "orphan_code": len(orphan_code_no_reqs),
         }
 
         return {
@@ -139,6 +299,9 @@ class TraceabilityService:
             "edges": edges,
             "orphans": orphans,
             "stats": stats,
+            "coverage_metrics": coverage_metrics,
+            "coverage_by_category": coverage_by_category,
+            "rtm_rows": rtm_rows,
         }
 
     def _parse_requirements(self) -> List[Dict]:
