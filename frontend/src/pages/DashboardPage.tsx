@@ -515,14 +515,15 @@ export default function DashboardPage() {
                 Open Activity →
               </button>
             </div>
-            <div className="flex items-end gap-1.5 h-[100px]">
+            <div className="flex items-end gap-1.5" style={{ height: 90 }}>
               {activityHeatmapData.map(d => {
-                const h = d.count === 0 ? 4 : Math.max(8, (d.count / maxDayCount) * 100);
-                const intensity = d.count === 0 ? 0.15 : 0.4 + (d.count / maxDayCount) * 0.6;
+                const barH = d.count === 0 ? 0 : Math.max(6, Math.round((d.count / maxDayCount) * 60));
                 return (
-                  <div key={d.fullDate} className="flex-1 flex flex-col items-center gap-1" title={`${d.fullDate}: ${d.count} entries`}>
-                    <div className="w-full rounded-t transition-all" style={{ height: `${h}%`, background: 'var(--accent-teal)', opacity: intensity }} />
-                    <span className="text-[8px] font-mono whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{d.label.slice(0, 6)}</span>
+                  <div key={d.fullDate} className="flex-1 flex flex-col items-center justify-end gap-0.5" title={`${d.fullDate}: ${d.count} entries`}>
+                    {d.count > 0 && <span className="text-[7px] font-bold tabular-nums" style={{ color: 'var(--text-muted)' }}>{d.count}</span>}
+                    <div className="w-full rounded-t transition-all"
+                      style={{ height: barH, background: 'var(--accent-teal)', opacity: d.count === 0 ? 0.1 : 0.5 + (d.count / maxDayCount) * 0.5 }} />
+                    <span className="text-[7px] font-mono whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{d.label.slice(0, 6)}</span>
                   </div>
                 );
               })}
