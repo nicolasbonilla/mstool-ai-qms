@@ -256,10 +256,27 @@ class AuditEngine:
         }
 
     def _full_audit(self) -> List[Dict]:
-        """Check all IEC 62304 clauses with enriched detail."""
+        """Check all IEC 62304 clauses with enriched detail.
+
+        Each clause is checked independently — if one clause's GitHub API
+        call fails (rate limit, timeout), it scores 'missing' with an error
+        note rather than crashing the entire audit. This was a production
+        bug: with 60/hr unauthenticated rate limit, the 15th clause would
+        hit 403 and the whole audit returned "Audit failed" to the user.
+        """
         questions = []
         for clause_def in CLAUSES:
-            evidence, score = self._check_clause(clause_def)
+            try:
+                evidence, score = self._check_clause(clause_def)
+            except Exception as e:
+                logger.warning(f"Clause {clause_def['clause']} check failed: {e}")
+                evidence = [{
+                    "type": "error",
+                    "reference": "GitHub API or service error",
+                    "content": f"Could not verify this clause: {str(e)[:200]}. "
+                               "This may be a transient rate-limit issue — re-run the audit.",
+                }]
+                score = "missing"
             questions.append({
                 "clause": clause_def["clause"],
                 "group": clause_def["group"],

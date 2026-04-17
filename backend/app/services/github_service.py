@@ -19,8 +19,15 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # Module-level cache: {cache_key: (data, expire_timestamp)}
+# Cache survives within a single Cloud Run instance lifetime (no cross-instance
+# sharing). With scale-to-zero, first request post-cold-start pays the cost;
+# subsequent requests are fast for TTL duration.
+#
+# Tuned for cost: GitHub API calls are the #1 latency + rate-limit source.
+# 15 minutes means the Dashboard loads fast on repeat visits, and even
+# rapid page-switching during a demo session stays cached.
 _cache: Dict[str, Tuple[Any, float]] = {}
-CACHE_TTL = 300  # 5 minutes
+CACHE_TTL = 900  # 15 minutes (was 5 — too short for our page-load pattern)
 
 
 class GitHubService:
