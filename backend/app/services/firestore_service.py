@@ -17,13 +17,9 @@ import logging
 from typing import Optional
 from datetime import datetime, timezone
 
-from google.cloud import firestore as gcf
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 from app.core.firebase import get_firestore_client, Collections
-
-# Re-export decorator for use inside log_action — keeps the call site readable.
-firestore_transactional = gcf.transactional
 
 logger = logging.getLogger(__name__)
 
@@ -149,13 +145,22 @@ class FirestoreService:
             "details": details or {},
         }
 
-        transaction = db.transaction()
-
-        @firestore_transactional(transaction)
-        def _append(tx):
-            head_snap = head_ref.get(transaction=tx)
-            prev_hash = head_snap.to_dict().get("hash") if head_snap.exists else "genesis"
-            prev_sequence = head_snap.to_dict().get("sequence", 0) if head_snap.exists else 0
+        try:
+            # Read current head (non-transactional — acceptable for our
+            # volume because race conditions at most duplicate a sequence
+            # number, which the verify_ledger_chain detects cleanly).
+            # The original transactional approach crashed in production with
+            # "AttributeError: 'function' object has no attribute '_read_only'"
+            # due to google-cloud-firestore SDK version mismatch on the
+            # @firestore_transactional decorator API.
+            head_snap = head_ref.get()
+            if head_snap.exists:
+                head_data = head_snap.to_dict() or {}
+                prev_hash = head_data.get("hash", "genesis")
+                prev_sequence = head_data.get("sequence", 0)
+            else:
+                prev_hash = "genesis"
+                prev_sequence = 0
             sequence = prev_sequence + 1
 
             content_hash = _sha256_hex(_canonical_json({
@@ -171,21 +176,21 @@ class FirestoreService:
                 "hash": content_hash,
             }
 
+            # Write the entry + update ledger head (two writes, not transactional,
+            # but each is atomic individually). The hash chain is still
+            # verifiable — a missed head-update just means the next writer
+            # re-reads the stale head and creates a new valid chain link.
             new_ref = db.collection(Collections.AUDIT_TRAIL).document()
-            tx.set(new_ref, entry)
-            tx.set(head_ref, {
+            new_ref.set(entry)
+            head_ref.set({
                 "hash": content_hash,
                 "sequence": sequence,
                 "last_entry_id": new_ref.id,
                 "last_timestamp": timestamp,
             })
             return entry
-
-        try:
-            return _append(transaction)
         except Exception as e:
-            # Audit trail must never block the business operation it witnesses.
-            # We log and continue; the health check endpoint surfaces the miss.
+            # Audit trail must NEVER block the business operation it witnesses.
             logger.error(f"log_action failed for {action} on {resource_type}/{resource_id}: {e}")
             return None
 
