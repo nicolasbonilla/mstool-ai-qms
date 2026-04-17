@@ -8,7 +8,7 @@ import {
 import {
   FileText, ChevronDown, AlertTriangle, Clock, CheckCircle2,
   ExternalLink, User, GitCommit, Calendar, Search, Download,
-  Sparkles, Eye, Shield, X, ArrowUpDown, BarChart3,
+  Sparkles, Eye, Shield, X, ArrowUpDown, TrendingUp,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell,
@@ -157,7 +157,7 @@ export default function DocSyncPage() {
       {timeline && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 rounded-2xl p-4" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
-            <div className="flex items-center gap-2 mb-2"><BarChart3 size={13} style={{ color: 'var(--text-muted)' }} /><span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>Document commits per month</span></div>
+            <div className="flex items-center gap-2 mb-2"><TrendingUp size={13} style={{ color: 'var(--text-muted)' }} /><span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>Document commits per month</span></div>
             <div style={{ height: 120 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={timeline.monthly_commits || []}>
