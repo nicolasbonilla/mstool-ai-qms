@@ -93,12 +93,45 @@ async def get_auth_coverage(user: CurrentUser = Depends(get_current_user)):
 
 
 @router.get("/documents")
-async def list_documents(standard: Optional[str] = None, user: CurrentUser = Depends(get_current_user)):
-    """List all regulatory documents with freshness indicators."""
+async def list_documents(standard: Optional[str] = None,
+                          user: CurrentUser = Depends(get_current_user)):
+    """List all regulatory documents with freshness AND review-state indicators.
+
+    Each doc is augmented with the latest review record from
+    qms_doc_reviews so the page can distinguish 'fresh / never_reviewed /
+    modified_since_review / overdue_review' (ISO 13485 §4.2.4).
+    """
+    from app.services.doc_review_service import (
+        all_latest_reviews, derive_review_status,
+    )
     service = _get_service()
     docs = service.get_document_inventory()
     if standard:
         docs = [d for d in docs if d["standard"] == standard]
+
+    # One Firestore scan for all reviews — fast, cached server-side
+    reviews_by_path = all_latest_reviews()
+
+    for d in docs:
+        latest = reviews_by_path.get(d["path"])
+        # Fetch current content hash lazily — only if there IS a prior
+        # review so we can detect drift. For never-reviewed docs, no need.
+        current_hash = None
+        if latest and latest.get("reviewed_content_hash"):
+            try:
+                content = service.github.get_file_content(d["path"]) or ""
+                from app.services.doc_review_service import _content_hash
+                current_hash = _content_hash(content)
+            except Exception:
+                pass
+
+        status_info = derive_review_status(d, latest, current_hash)
+        d["review_event_status"] = status_info["review_status"]
+        d["review_event_reason"] = status_info["reason"]
+        d["last_reviewed_at"] = status_info["last_reviewed_at"]
+        d["last_reviewer_email"] = status_info["last_reviewer_email"]
+        d["content_unchanged_since_review"] = status_info["hash_match"]
+
     return {"documents": docs, "total": len(docs)}
 
 

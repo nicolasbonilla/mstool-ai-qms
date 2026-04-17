@@ -128,6 +128,7 @@ class ComplianceService:
 
         Includes: last modification date (from git), days since modified, next review due
         (annual cycle per ISO 13485 industry practice), review status, last author/message.
+        Auto-discovers ALL docs/* subdirectories — no hardcoded list.
         """
         from datetime import timedelta
 
@@ -135,29 +136,47 @@ class ComplianceService:
         REVIEW_CYCLE_DAYS = 365
         DUE_SOON_THRESHOLD_DAYS = 30
 
-        # IEC 62304 §5.1.7 — document owner per standard family
+        # IEC 62304 §5.1.7 — document owner per standard family.
+        # Auto-discovered subdirs without an explicit owner default to "Document Owner".
         OWNER_BY_STANDARD = {
             "iec62304": "Software Lead",
             "qms": "QMS Manager",
             "clinical": "Clinical Advisor",
+            "clinical-evaluation": "Clinical Advisor",
             "usability": "UX Lead",
             "mdr": "Regulatory Affairs",
             "ai-act": "AI Governance Lead",
+            "cybersecurity": "Security Lead",
+            "audit-records": "QMS Manager",
+            "post-market": "Regulatory Affairs",
+            "training": "QMS Manager",
         }
 
         STANDARD_LABELS = {
             "iec62304": "IEC 62304",
             "qms": "ISO 13485",
             "clinical": "ISO 14155",
+            "clinical-evaluation": "MEDDEV 2.7/1 rev. 4",
             "usability": "IEC 62366-1",
             "mdr": "EU MDR 2017/745",
             "ai-act": "EU AI Act",
+            "cybersecurity": "IEC 81001-5-1",
+            "audit-records": "ISO 13485 §4.2.5",
+            "post-market": "ISO 14971 §10",
+            "training": "ISO 13485 §6.2.2",
         }
 
         documents = []
         now = datetime.now(timezone.utc)
 
-        for subdir in ["iec62304", "qms", "clinical", "usability", "mdr", "ai-act"]:
+        # Auto-discover every subdirectory under docs/ (no hardcoded list).
+        try:
+            top_level = self._list_dir("docs") or []
+            subdirs = [item["name"] for item in top_level if item.get("type") == "dir"]
+        except Exception:
+            subdirs = ["iec62304", "qms", "clinical", "usability", "mdr", "ai-act"]
+
+        for subdir in subdirs:
             md_files = self._list_md_files(f"docs/{subdir}")
             for md in sorted(md_files, key=lambda x: x["name"]):
                 # Pull last commit metadata for review-cycle calculation
@@ -193,8 +212,8 @@ class ComplianceService:
                     "doc_id": md["name"].split("_")[0] if "_" in md["name"] else md["name"].replace(".md", ""),
                     "title": md["name"].replace(".md", "").replace("_", " "),
                     "standard": subdir,
-                    "standard_label": STANDARD_LABELS.get(subdir, subdir),
-                    "owner": OWNER_BY_STANDARD.get(subdir, "Unassigned"),
+                    "standard_label": STANDARD_LABELS.get(subdir, subdir.replace("-", " ").title()),
+                    "owner": OWNER_BY_STANDARD.get(subdir, "Document Owner"),
                     "lines": md.get("size", 0) // 40,
                     "size_bytes": md.get("size", 0),
                     "github_url": f"https://github.com/{self.github.repo}/blob/main/{md['path']}",

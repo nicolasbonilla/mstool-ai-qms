@@ -95,6 +95,7 @@ app.add_middleware(AuditTrailMiddleware)
 from app.api.routes import (
     compliance, forms, users, traceability, audit, soup, ai,
     system, activity, baselines, predict, webhooks, mcp, cron,
+    docsync,
     agents as agents_route,
 )
 
@@ -113,6 +114,7 @@ app.include_router(predict.router, prefix=settings.API_V1_STR)
 app.include_router(webhooks.router, prefix=settings.API_V1_STR)
 app.include_router(mcp.router, prefix=settings.API_V1_STR)
 app.include_router(cron.router, prefix=settings.API_V1_STR)
+app.include_router(docsync.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/", tags=["Health"])
