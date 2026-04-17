@@ -2,9 +2,10 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { ReactFlow, MiniMap, Controls, Background, Node, Edge, Position } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { getTraceabilityGraph } from '../api/compliance';
-import { AlertTriangle, GitBranch, Network, Table as TableIcon, CheckCircle2, AlertCircle, XCircle, ArrowRight, FileText } from 'lucide-react';
+import { AlertTriangle, GitBranch, Network, Table as TableIcon, CheckCircle2, AlertCircle, XCircle, ArrowRight, FileText, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PageSkeleton from '../components/ui/PageSkeleton';
+import { getSuspectLinks } from '../api/predict';
 
 /* ─── Types ─── */
 interface OrphanReq { id: string; description: string; category: string; safety_class: string; has_code_implementation: boolean; code_modules: string[]; reason: string; suggested_form: string; standard_ref: string; }
@@ -86,9 +87,26 @@ export default function TraceabilityPage() {
   const [matrixFilter, setMatrixFilter] = useState<'all' | 'complete' | 'partial' | 'uncovered'>('all');
   const [matrixCategoryFilter, setMatrixCategoryFilter] = useState<string>('');
 
+  const [suspectReqIds, setSuspectReqIds] = useState<Set<string>>(new Set());
+
   useEffect(() => {
-    getTraceabilityGraph()
-      .then(({ data }) => { setData(data); layoutGraph(data); })
+    const safe = <T,>(p: Promise<T>): Promise<T | null> => p.catch(() => null);
+    Promise.all([
+      getTraceabilityGraph(),
+      safe(getSuspectLinks()),
+    ])
+      .then(([graph, suspects]) => {
+        setData(graph.data);
+        layoutGraph(graph.data);
+        if (suspects) {
+          const ids = new Set<string>([
+            ...(suspects.data.suspect_req_ids || []),
+            ...(suspects.data.suspect_code_ids || []),
+            ...(suspects.data.suspect_test_ids || []),
+          ]);
+          setSuspectReqIds(ids);
+        }
+      })
       .catch((e) => setError(e.response?.data?.detail || 'Failed to load traceability'))
       .finally(() => setLoading(false));
   }, []);
@@ -285,8 +303,21 @@ export default function TraceabilityPage() {
           LEVEL 2B — VIEW TOGGLE: MATRIX RTM | GRAPH
           ═══════════════════════════════════════ */}
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Traceability Matrix (FDA Premarket Guidance)</p>
-        <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)' }}>
+        <div className="flex items-center gap-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Traceability Matrix (FDA Premarket Guidance)</p>
+          {suspectReqIds.size > 0 && (
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1" style={{ background: 'rgba(245,158,11,0.12)', color: '#F59E0B' }}>
+              <AlertTriangle size={9} /> {suspectReqIds.size} suspect items
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <a href={`${import.meta.env.VITE_API_BASE_URL || ''}/api/v1/docsync/export`} download
+            className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold rounded-lg hover:opacity-80 transition-all"
+            style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+            <Download size={10} /> Export CSV
+          </a>
+          <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)' }}>
           <button onClick={() => setView('matrix')}
             className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all"
             style={{
@@ -305,6 +336,7 @@ export default function TraceabilityPage() {
             }}>
             <Network size={12} /> Graph
           </button>
+          </div>
         </div>
       </div>
 
@@ -367,7 +399,16 @@ export default function TraceabilityPage() {
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-tertiary)'; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
                       <td className="px-3 py-2.5">
-                        <code className="text-[10px] font-mono font-bold" style={{ color: 'var(--accent-teal)' }}>{r.req_id}</code>
+                        <div className="flex items-center gap-1.5">
+                          <code className="text-[10px] font-mono font-bold" style={{ color: 'var(--accent-teal)' }}>{r.req_id}</code>
+                          {suspectReqIds.has(r.req_id) && (
+                            <span title="Suspect: upstream code changed recently — re-verify this requirement's trace chain"
+                              className="text-[8px] font-bold px-1 py-0.5 rounded inline-flex items-center gap-0.5"
+                              style={{ background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }}>
+                              <AlertTriangle size={7} /> suspect
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-3 py-2.5">
                         <span className="text-[11px] line-clamp-1" style={{ color: 'var(--text-primary)' }}>{r.description || '—'}</span>
