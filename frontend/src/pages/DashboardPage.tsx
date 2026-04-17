@@ -189,13 +189,15 @@ export default function DashboardPage() {
   if (loading) return <DashboardSkeleton />;
   if (!data) return null;
 
-  const checksMap = Object.fromEntries(data.checks.map(c => [c.id, c]));
-  const totalPass = data.checks.filter(c => c.status === 'pass').length;
-  const totalChecks = data.checks.length;
-  const ceScore = data.scores.ce_mark_overall;
+  const checks = data.checks || [];
+  const scores = data.scores || { ce_mark_overall: 0, iec62304: 0, iso13485: 0, cybersecurity: 0 };
+  const checksMap = Object.fromEntries(checks.map(c => [c.id, c]));
+  const totalPass = checks.filter(c => c.status === 'pass').length;
+  const totalChecks = checks.length;
+  const ceScore = scores.ce_mark_overall;
 
   // Per-check radial bar data — for the Score Breakdown chart
-  const radialData = data.checks.map(c => ({
+  const radialData = checks.map(c => ({
     name: c.title,
     value: Math.round(c.score * 10) / 10,
     fill: c.score >= 90 ? '#10B981' : c.score >= 70 ? '#F59E0B' : '#EF4444',
@@ -203,7 +205,7 @@ export default function DashboardPage() {
 
   // Activity heatmap max for color scaling
   const maxDayCount = Math.max(1, ...activityHeatmapData.map(d => d.count));
-  const actionChecks = data.checks.filter(c => c.action);
+  const actionChecks = checks.filter(c => c.action);
   // Only the LATEST CI run matters for urgency — historical failures are resolved
   const latestCI = ci.length > 0 ? ci[0] : null;
   const ciCurrentlyFailing = latestCI?.conclusion === 'failure';

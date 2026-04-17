@@ -249,11 +249,15 @@ def get_drift_history(agent_name: Optional[str] = None, limit: int = 50) -> List
         .order_by("captured_at", direction="DESCENDING")
         .limit(limit)
     )
-    out = []
-    for doc in archive.stream():
-        d = doc.to_dict() or {}
-        if agent_name and d.get("agent_name") != agent_name:
-            continue
-        d["id"] = doc.id
-        out.append(d)
-    return out
+    try:
+        out = []
+        for doc in archive.stream():
+            d = doc.to_dict() or {}
+            if agent_name and d.get("agent_name") != agent_name:
+                continue
+            d["id"] = doc.id
+            out.append(d)
+        return out
+    except Exception as e:
+        logger.warning(f"get_drift_history query failed (missing index?): {e}")
+        return []

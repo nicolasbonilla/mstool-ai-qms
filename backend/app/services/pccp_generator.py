@@ -143,8 +143,11 @@ def _latest_pccp_id() -> Optional[str]:
         .order_by("sealed_at", direction="DESCENDING")
         .limit(1)
     )
-    for doc in q.stream():
-        return doc.id
+    try:
+        for doc in q.stream():
+            return doc.id
+    except Exception as e:
+        logger.warning(f"_latest_pccp_id query failed (missing index?): {e}")
     return None
 
 

@@ -148,12 +148,16 @@ class BaselineService:
             .order_by("created_at", direction="DESCENDING")
             .limit(limit)
         )
-        results = []
-        for doc in query.stream():
-            data = doc.to_dict()
-            data["id"] = doc.id
-            results.append(data)
-        return results
+        try:
+            results = []
+            for doc in query.stream():
+                data = doc.to_dict()
+                data["id"] = doc.id
+                results.append(data)
+            return results
+        except Exception as e:
+            logger.warning(f"list_baselines query failed (missing index?): {e}")
+            return []
 
     @staticmethod
     def get_baseline(version_tag: str) -> Optional[Dict[str, Any]]:

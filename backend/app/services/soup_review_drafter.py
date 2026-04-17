@@ -143,12 +143,16 @@ def list_drafts(limit: int = 100) -> List[Dict[str, Any]]:
         .order_by("drafted_at", direction="DESCENDING")
         .limit(limit)
     )
-    out = []
-    for doc in q.stream():
-        d = doc.to_dict() or {}
-        d["id"] = doc.id
-        out.append(d)
-    return out
+    try:
+        out = []
+        for doc in q.stream():
+            d = doc.to_dict() or {}
+            d["id"] = doc.id
+            out.append(d)
+        return out
+    except Exception as e:
+        logger.warning(f"list_drafts query failed (missing index?): {e}")
+        return []
 
 
 def draft_for_class_c(deps: List[Dict[str, Any]],

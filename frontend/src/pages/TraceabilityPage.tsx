@@ -535,20 +535,20 @@ export default function TraceabilityPage() {
           )}
 
           {/* Risk controls without verification */}
-          {data.orphans.risk_controls_without_verification.length > 0 && (
+          {orphansSafe.risk_controls_without_verification.length > 0 && (
             <div className="rounded-2xl overflow-hidden"
               style={{ background: 'var(--card-bg)', border: '1px solid rgba(239,68,68,0.20)', boxShadow: '0 4px 20px rgba(239,68,68,0.06)' }}>
               <div className="px-4 py-3 flex items-center gap-3" style={{ background: 'rgba(239,68,68,0.05)', borderBottom: '1px solid rgba(239,68,68,0.15)' }}>
                 <AlertTriangle size={14} style={{ color: '#EF4444' }} />
                 <div className="flex-1">
                   <span className="text-[12px] font-bold" style={{ color: '#EF4444' }}>
-                    Risk Controls Without Verification ({data.orphans.risk_controls_without_verification.length})
+                    Risk Controls Without Verification ({orphansSafe.risk_controls_without_verification.length})
                   </span>
                   <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>ISO 14971 §7.3 — each risk control needs verification of implementation AND effectiveness</p>
                 </div>
               </div>
               <div className="divide-y" style={{ borderColor: 'var(--border-subtle)' }}>
-                {data.orphans.risk_controls_without_verification.slice(0, 6).map(o => (
+                {orphansSafe.risk_controls_without_verification.slice(0, 6).map(o => (
                   <div key={o.id} className="px-4 py-3 flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                       <code className="text-[10px] font-mono font-bold mb-1 inline-block" style={{ color: '#EF4444' }}>{o.id}</code>
@@ -570,20 +570,20 @@ export default function TraceabilityPage() {
           )}
 
           {/* Code without REQ trace */}
-          {data.orphans.code_without_requirements.length > 0 && (
+          {orphansSafe.code_without_requirements.length > 0 && (
             <div className="rounded-2xl overflow-hidden"
               style={{ background: 'var(--card-bg)', border: '1px solid rgba(245,158,11,0.20)', boxShadow: '0 4px 20px rgba(245,158,11,0.06)' }}>
               <div className="px-4 py-3 flex items-center gap-3" style={{ background: 'rgba(245,158,11,0.05)', borderBottom: '1px solid rgba(245,158,11,0.15)' }}>
                 <AlertCircle size={14} style={{ color: '#F59E0B' }} />
                 <div className="flex-1">
                   <span className="text-[12px] font-bold" style={{ color: '#F59E0B' }}>
-                    Code Modules Without Requirement Trace ({data.orphans.code_without_requirements.length})
+                    Code Modules Without Requirement Trace ({orphansSafe.code_without_requirements.length})
                   </span>
                   <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>IEC 62304 §5.2.6 + §5.3 — every code module must trace to a requirement (add REQ-XXX-XXX comment)</p>
                 </div>
               </div>
               <div className="divide-y" style={{ borderColor: 'var(--border-subtle)' }}>
-                {data.orphans.code_without_requirements.slice(0, 8).map(o => (
+                {orphansSafe.code_without_requirements.slice(0, 8).map(o => (
                   <div key={o.id} className="px-4 py-2.5 flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
@@ -601,9 +601,9 @@ export default function TraceabilityPage() {
                     </div>
                   </div>
                 ))}
-                {data.orphans.code_without_requirements.length > 8 && (
+                {orphansSafe.code_without_requirements.length > 8 && (
                   <div className="px-4 py-2.5 text-[10px] font-semibold text-center" style={{ color: 'var(--text-muted)' }}>
-                    + {data.orphans.code_without_requirements.length - 8} more
+                    + {orphansSafe.code_without_requirements.length - 8} more
                   </div>
                 )}
               </div>

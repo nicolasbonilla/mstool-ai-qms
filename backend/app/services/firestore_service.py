@@ -336,33 +336,29 @@ class FirestoreService:
     def get_score_history(days: int = 30, granularity: str = "day") -> list:
         """Return score snapshots ordered oldest-first for the last N days.
 
-        Implementation: order by document ID (which encodes the time bucket
-        like "2026-04-16T15" for hour or "2026-04-16" for day). This avoids
-        needing a Firestore composite index for `where + order_by`.
+        Fetches ALL docs (no ordering on server — avoids Firestore index
+        requirement), filters + sorts in memory. qms_score_history is
+        small (~hundreds of docs max) so this is efficient.
         """
         from datetime import timedelta
         db = FirestoreService._db()
         since = datetime.now(timezone.utc) - timedelta(days=days)
-        since_id = since.strftime("%Y-%m-%dT%H")
 
-        # Pull a generous window then filter in-memory — score history is
-        # tiny (hundreds of docs at most). This trades a bit of bandwidth
-        # for zero index requirements.
-        query = (
-            db.collection(Collections.SCORE_HISTORY)
-            .order_by("__name__", direction="DESCENDING")
-            .limit(days * 24 + 50)
-        )
         rows = []
-        for doc in query.stream():
-            data = doc.to_dict() or {}
-            data["bucket_id"] = doc.id
-            # Filter by bucket id lexically — works for both day and hour formats.
-            if doc.id < since.strftime("%Y-%m-%d"):
-                continue
-            if granularity == "day" and data.get("granularity") == "hour":
-                continue
-            rows.append(data)
+        try:
+            # Simple stream with no ordering — zero index dependency.
+            for doc in db.collection(Collections.SCORE_HISTORY).stream():
+                data = doc.to_dict() or {}
+                data["bucket_id"] = doc.id
+                # Time filter: skip docs older than the window
+                if doc.id < since.strftime("%Y-%m-%d"):
+                    continue
+                if granularity == "day" and data.get("granularity") == "hour":
+                    continue
+                rows.append(data)
+        except Exception as e:
+            logger.warning(f"get_score_history failed: {e}")
+
         rows.sort(key=lambda r: (r.get("timestamp") or r.get("bucket_id", "")))
         return rows
 
