@@ -60,7 +60,7 @@ An autonomous regulatory compliance platform that leverages **large language mod
 14. [Form Templates — Structured Regulatory Evidence](#14-form-templates--structured-regulatory-evidence)
 15. [Security Model](#15-security-model)
 16. [Deployment Architecture](#16-deployment-architecture)
-17. [API Reference (34 Endpoints)](#17-api-reference-34-endpoints)
+17. [API Reference (111+ Endpoints)](#17-api-reference-34-endpoints)
 18. [Technology Stack](#18-technology-stack)
 19. [Comparison with Commercial QMS Tools](#19-comparison-with-commercial-qms-tools)
 20. [Future Work — Research Directions](#20-future-work--research-directions)
@@ -781,7 +781,7 @@ requirements.txt + package.json
 
 ---
 
-## 17. API Reference (34 Endpoints)
+## 17. API Reference (111+ Endpoints)
 
 See the interactive Swagger documentation at: [/api/docs](https://mstool-ai-qms-354942400159.us-central1.run.app/api/docs)
 

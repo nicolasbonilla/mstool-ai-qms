@@ -35,6 +35,7 @@ git history.
 | `ANTHROPIC_API_KEY` | manual | `gcloud run services update mstool-ai-qms --update-env-vars ANTHROPIC_API_KEY=sk-ant-...` |
 | `GITHUB_WEBHOOK_SECRET` | manual | generate with `python -c "import secrets; print(secrets.token_urlsafe(48))"` then update Cloud Run + GitHub webhook UI |
 | `GITHUB_TOKEN` | manual (optional) | needed for PR Reviewer to post comments |
+| `GITHUB_TOKEN` | manual | GitHub personal access token for the medical-imaging-viewer repo. WITHOUT THIS the backend hits 60 req/hr rate limit → all pages crash. Must have `repo` scope. |
 | `QMS_ESIGN_KMS_KEY` | manual (optional) | full Cloud KMS key resource name; falls back to HMAC dev mode if unset |
 | `RATE_LIMIT_AGENT_PER_MIN` | optional | default `10/minute` |
 | `MAX_CLAUDE_CALLS_PER_HOUR` | optional | default `100` |
@@ -61,10 +62,11 @@ npx firebase deploy --only firestore:rules --project mstool-ai-qms
 ## Verify a deploy
 
 ```bash
-# Confirm latest revision + env var presence
+# Confirm latest revision + all 7 env vars present
 gcloud run services describe mstool-ai-qms --region=us-central1 \
   --project=brain-mri-476110 \
   --format="value(spec.template.spec.containers[0].env[].name,status.latestReadyRevisionName)"
+# Expected: GITHUB_REPO;GOOGLE_CLOUD_PROJECT;ANTHROPIC_API_KEY;QMS_FIREBASE_PROJECT;GITHUB_WEBHOOK_SECRET;CRON_SECRET;GITHUB_TOKEN
 
 # Expected output (4 env vars at minimum):
 # GITHUB_REPO;GOOGLE_CLOUD_PROJECT;ANTHROPIC_API_KEY;QMS_FIREBASE_PROJECT
