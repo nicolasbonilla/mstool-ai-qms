@@ -263,14 +263,18 @@ export default function ActivityPage() {
               {(summary?.by_severity.error ?? 0) > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: '#EF4444' }} />{summary?.by_severity.error} error</span>}
             </div>
           </div>
-          <div className="flex items-end gap-1 h-20">
+          <div className="flex items-end gap-1.5" style={{ height: 80 }}>
             {days.map(day => {
               const count = summary?.by_day[day] ?? 0;
-              const h = Math.max(2, (count / maxDayCount) * 100);
+              // Use pixel heights so bars are always visible. Min 4px for non-zero.
+              const barH = count === 0 ? 0 : Math.max(6, Math.round((count / maxDayCount) * 64));
               return (
-                <div key={day} className="flex-1 flex flex-col items-center gap-1" title={`${day}: ${count} entries`}>
+                <div key={day} className="flex-1 flex flex-col items-center justify-end gap-0.5" title={`${day}: ${count} entries`}>
+                  {count > 0 && (
+                    <span className="text-[8px] font-bold tabular-nums" style={{ color: 'var(--text-muted)' }}>{count}</span>
+                  )}
                   <div className="w-full rounded-t transition-all"
-                    style={{ height: `${h}%`, background: 'var(--accent-teal)', opacity: 0.6 + (count / maxDayCount) * 0.4 }} />
+                    style={{ height: barH, background: 'var(--accent-teal)', opacity: count === 0 ? 0.15 : 0.5 + (count / maxDayCount) * 0.5 }} />
                   <span className="text-[8px] font-mono" style={{ color: 'var(--text-muted)' }}>
                     {day.slice(5)}
                   </span>
