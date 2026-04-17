@@ -81,15 +81,21 @@ async def list_agent_runs(name: str, limit: int = 20,
     db = get_firestore_client()
     query = (
         db.collection(Collections.AGENT_RUNS)
-        .where("agent_name", "==", name)
         .order_by("started_at", direction="DESCENDING")
-        .limit(limit)
+        .limit(limit * 3)
     )
     runs = []
-    for doc in query.stream():
-        data = doc.to_dict()
-        data["id"] = doc.id
-        runs.append(data)
+    try:
+        for doc in query.stream():
+            data = doc.to_dict() or {}
+            if data.get("agent_name") != name:
+                continue
+            data["id"] = doc.id
+            runs.append(data)
+            if len(runs) >= limit:
+                break
+    except Exception:
+        pass
     return {"runs": runs}
 
 

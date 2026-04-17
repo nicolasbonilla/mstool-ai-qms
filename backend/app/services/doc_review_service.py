@@ -124,18 +124,26 @@ def record_review(
 
 
 def list_reviews_for(doc_path: str, limit: int = 50) -> List[Dict[str, Any]]:
+    """List reviews for a doc — in-memory filter to avoid composite index."""
     db = get_firestore_client()
     q = (
         db.collection(REVIEW_COLLECTION)
-        .where("doc_path", "==", doc_path)
         .order_by("reviewed_at", direction="DESCENDING")
-        .limit(limit)
+        .limit(limit * 5)  # over-fetch then filter
     )
     out = []
-    for doc in q.stream():
-        d = doc.to_dict() or {}
-        d["id"] = doc.id
-        out.append(d)
+    try:
+        for doc in q.stream():
+            d = doc.to_dict() or {}
+            if d.get("doc_path") != doc_path:
+                continue
+            d["id"] = doc.id
+            out.append(d)
+            if len(out) >= limit:
+                break
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"list_reviews_for failed: {e}")
     return out
 
 
@@ -148,19 +156,22 @@ def all_latest_reviews() -> Dict[str, Dict[str, Any]]:
     """{doc_path: latest_review} — one Firestore scan, fast for dashboard load."""
     db = get_firestore_client()
     by_doc: Dict[str, Dict[str, Any]] = {}
-    # Scan in descending-time chunks; first-seen wins per doc_path
-    q = (
-        db.collection(REVIEW_COLLECTION)
-        .order_by("reviewed_at", direction="DESCENDING")
-        .limit(500)
-    )
-    for doc in q.stream():
-        d = doc.to_dict() or {}
-        path = d.get("doc_path")
-        if not path or path in by_doc:
-            continue
-        d["id"] = doc.id
-        by_doc[path] = d
+    try:
+        q = (
+            db.collection(REVIEW_COLLECTION)
+            .order_by("reviewed_at", direction="DESCENDING")
+            .limit(500)
+        )
+        for doc in q.stream():
+            d = doc.to_dict() or {}
+            path = d.get("doc_path")
+            if not path or path in by_doc:
+                continue
+            d["id"] = doc.id
+            by_doc[path] = d
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"all_latest_reviews failed: {e}")
     return by_doc
 
 

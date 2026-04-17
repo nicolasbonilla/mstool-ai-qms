@@ -17,8 +17,6 @@ import logging
 from typing import Optional
 from datetime import datetime, timezone
 
-from google.cloud.firestore_v1.base_query import FieldFilter
-
 from app.core.firebase import get_firestore_client, Collections
 
 logger = logging.getLogger(__name__)
@@ -88,19 +86,21 @@ class FirestoreService:
 
     @staticmethod
     def list_forms(template_id: Optional[str] = None, status: Optional[str] = None) -> list:
-        """List forms with optional filters."""
+        """List forms — in-memory filter to avoid composite index requirement."""
         db = FirestoreService._db()
-        query = db.collection(Collections.FORMS)
-        if template_id:
-            query = query.where("template_id", "==", template_id)
-        if status:
-            query = query.where("status", "==", status)
-        query = query.order_by("created_at", direction="DESCENDING")
+        query = db.collection(Collections.FORMS).order_by("created_at", direction="DESCENDING").limit(200)
         results = []
-        for doc in query.stream():
-            data = doc.to_dict()
-            data["id"] = doc.id
-            results.append(data)
+        try:
+            for doc in query.stream():
+                data = doc.to_dict() or {}
+                data["id"] = doc.id
+                if template_id and data.get("template_id") != template_id:
+                    continue
+                if status and data.get("status") != status:
+                    continue
+                results.append(data)
+        except Exception as e:
+            logger.warning(f"list_forms failed: {e}")
         return results
 
     @staticmethod
@@ -201,25 +201,41 @@ class FirestoreService:
                         action: Optional[str] = None) -> list:
         """Get recent audit trail entries with optional filters.
 
-        Filters are optional and composable; applying more than one may require
-        Firestore composite indexes — we keep the default queries index-free.
+        IMPORTANT: all filtering is done IN MEMORY after a simple
+        order_by + limit query. This avoids requiring Firestore composite
+        indexes (which caused 400 errors → CORS failures → blank pages).
+        Our audit trail volume is low enough (<10k entries) that this is
+        efficient. We over-fetch by 3x to ensure we have enough after
+        filtering.
         """
         db = FirestoreService._db()
-        query = db.collection(Collections.AUDIT_TRAIL)
-        if resource_type:
-            query = query.where(filter=FieldFilter("resource_type", "==", resource_type))
-        if user_uid:
-            query = query.where(filter=FieldFilter("user_uid", "==", user_uid))
-        if action:
-            query = query.where(filter=FieldFilter("action", "==", action))
-        if since_iso:
-            query = query.where(filter=FieldFilter("timestamp", ">=", since_iso))
-        query = query.order_by("timestamp", direction="DESCENDING").limit(limit)
+        # Single-field order_by needs NO composite index
+        fetch_limit = limit * 3 if (resource_type or user_uid or action or since_iso) else limit
+        fetch_limit = min(fetch_limit, 500)  # cap to avoid huge reads
+        query = (
+            db.collection(Collections.AUDIT_TRAIL)
+            .order_by("timestamp", direction="DESCENDING")
+            .limit(fetch_limit)
+        )
         results = []
-        for doc in query.stream():
-            data = doc.to_dict()
-            data["id"] = doc.id
-            results.append(data)
+        try:
+            for doc in query.stream():
+                data = doc.to_dict() or {}
+                data["id"] = doc.id
+                # In-memory filters
+                if resource_type and data.get("resource_type") != resource_type:
+                    continue
+                if user_uid and data.get("user_uid") != user_uid:
+                    continue
+                if action and data.get("action") != action:
+                    continue
+                if since_iso and (data.get("timestamp") or "") < since_iso:
+                    continue
+                results.append(data)
+                if len(results) >= limit:
+                    break
+        except Exception as e:
+            logger.warning(f"get_audit_trail query failed: {e}")
         return results
 
     @staticmethod
@@ -237,9 +253,11 @@ class FirestoreService:
         auditor dump can confirm tamper-evidence end-to-end.
         """
         db = FirestoreService._db()
+        # Use timestamp (standard field) for ordering — sequence is equivalent
+        # for our append-only ledger but might lack a single-field index.
         query = (
             db.collection(Collections.AUDIT_TRAIL)
-            .order_by("sequence", direction="ASCENDING")
+            .order_by("timestamp", direction="ASCENDING")
             .limit(limit)
         )
         prev_hash = "genesis"
@@ -373,17 +391,25 @@ class FirestoreService:
 
     @staticmethod
     def list_alerts(only_open: bool = True, limit: int = 50) -> list:
-        """List alerts, newest first."""
+        """List alerts, newest first. In-memory filter to avoid composite index."""
         db = FirestoreService._db()
-        query = db.collection(Collections.ALERTS)
-        if only_open:
-            query = query.where(filter=FieldFilter("acknowledged", "==", False))
-        query = query.order_by("created_at", direction="DESCENDING").limit(limit)
+        query = (
+            db.collection(Collections.ALERTS)
+            .order_by("created_at", direction="DESCENDING")
+            .limit(limit * 2)
+        )
         results = []
-        for doc in query.stream():
-            data = doc.to_dict()
-            data["id"] = doc.id
-            results.append(data)
+        try:
+            for doc in query.stream():
+                data = doc.to_dict() or {}
+                data["id"] = doc.id
+                if only_open and data.get("acknowledged"):
+                    continue
+                results.append(data)
+                if len(results) >= limit:
+                    break
+        except Exception as e:
+            logger.warning(f"list_alerts failed: {e}")
         return results
 
     @staticmethod

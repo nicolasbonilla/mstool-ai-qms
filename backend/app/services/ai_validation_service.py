@@ -271,13 +271,18 @@ class AIValidationService:
         agent_sections = []
         for a in agents_meta:
             # Fetch latest validation run
-            query = (
-                db.collection(Collections.AGENT_VALIDATIONS)
-                .where("agent_name", "==", a["name"])
-                .order_by("run_at", direction="DESCENDING")
-                .limit(5)
-            )
-            validations = [doc.to_dict() for doc in query.stream()]
+            try:
+                query = (
+                    db.collection(Collections.AGENT_VALIDATIONS)
+                    .order_by("run_at", direction="DESCENDING")
+                    .limit(30)
+                )
+                validations = [
+                    doc.to_dict() for doc in query.stream()
+                    if (doc.to_dict() or {}).get("agent_name") == a["name"]
+                ][:5]
+            except Exception:
+                validations = []
             latest = validations[0] if validations else None
 
             # IQ: the pinned model version and config

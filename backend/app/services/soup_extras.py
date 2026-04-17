@@ -233,12 +233,13 @@ def latest_soup_agent_run() -> Optional[Dict[str, Any]]:
         db = get_firestore_client()
         q = (
             db.collection(Collections.AGENT_RUNS)
-            .where("agent_name", "==", "soup_monitor")
             .order_by("started_at", direction="DESCENDING")
-            .limit(1)
+            .limit(20)
         )
         for doc in q.stream():
             d = doc.to_dict() or {}
+            if d.get("agent_name") != "soup_monitor":
+                continue
             d["id"] = doc.id
             return d
     except Exception as e:
