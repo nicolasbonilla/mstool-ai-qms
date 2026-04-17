@@ -247,7 +247,12 @@ export default function AuditPage() {
         />
       )}
 
-      {error && <div className="rounded-xl p-4" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)' }}><p className="text-[13px] text-red-600">{error}</p></div>}
+      {error && (
+        <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)' }}>
+          <p className="text-[13px] text-red-600">{error}</p>
+          <button onClick={() => setError('')} className="text-[11px] font-semibold px-2 py-1 rounded-lg hover:opacity-80" style={{ background: 'rgba(239,68,68,0.12)', color: '#DC2626' }}>Dismiss</button>
+        </div>
+      )}
 
       {/* ═══ BEFORE AUDIT ═══ */}
       {!result && !loading && (
