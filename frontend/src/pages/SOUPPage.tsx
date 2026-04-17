@@ -514,8 +514,8 @@ export default function SOUPPage() {
                                 </span>
                               )}
                               {d.license && (
-                                <span className="text-[9px] font-mono" style={{ color: 'var(--text-muted)' }}>
-                                  {d.license}
+                                <span className="text-[9px] font-mono truncate max-w-[120px] inline-block align-bottom" title={d.license} style={{ color: 'var(--text-muted)' }}>
+                                  {d.license.length > 30 ? d.license.slice(0, 28) + '…' : d.license}
                                 </span>
                               )}
                             </div>

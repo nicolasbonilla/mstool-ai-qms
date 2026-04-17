@@ -62,6 +62,29 @@ def _empty(name: str, source: str) -> Dict:
     }
 
 
+def _clean_license(raw: str | None) -> str | None:
+    """Extract a short SPDX-style license name from PyPI's license field.
+
+    PyPI packages sometimes put the ENTIRE license text in the 'license'
+    field (e.g., scipy includes the full BSD text). We truncate to the
+    first line or 60 chars, whichever is shorter. If it looks like a
+    proper SPDX identifier already (short, no newlines), keep it as-is.
+    """
+    if not raw:
+        return None
+    # If it's already short (typical SPDX), return as-is
+    first_line = raw.split("\n")[0].strip()
+    if len(first_line) <= 60:
+        return first_line
+    # Try to extract a known pattern from the start
+    # Search entire text for known license types (word-boundary match)
+    import re
+    for prefix in ["BSD", "MIT", "Apache", "LGPL", "GPL", "MPL", "ISC", "PSF", "Artistic"]:
+        if re.search(r'\b' + prefix + r'\b', raw, re.IGNORECASE):
+            return prefix + " License"
+    return first_line[:55] + "…"
+
+
 def _pypi_lookup(name: str) -> Dict:
     """Fetch package info from PyPI JSON API."""
     cached = _cached_or_none("pypi", name)
@@ -82,13 +105,22 @@ def _pypi_lookup(name: str) -> Dict:
                 or project_urls.get("Tracker")
                 or project_urls.get("Source")
             )
+            # License: prefer classifiers (structured) > license_expression (SPDX) > license field (often full text)
+            license_name = None
+            for classifier in (info.get("classifiers") or []):
+                if classifier.startswith("License :: OSI Approved ::"):
+                    license_name = classifier.split("::")[-1].strip()
+                    break
+            if not license_name:
+                license_name = _clean_license(info.get("license_expression") or info.get("license"))
+
             data = {
                 "name": name,
                 "source": "pypi",
                 "manufacturer": info.get("author")
                                  or (info.get("author_email") or "").split("<")[0].strip()
                                  or "Open Source",
-                "license": info.get("license") or info.get("license_expression"),
+                "license": license_name,
                 "homepage": info.get("home_page") or info.get("project_url"),
                 "issue_tracker": issue_tracker,
                 "summary": info.get("summary"),
